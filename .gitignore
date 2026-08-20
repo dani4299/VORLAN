@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Real user data - do not commit
+backend/vorlan-secure.db
+backend/profiles.json
+backend/secure_vault/notes_matrix.json
+backend/secure_vault/personal/
+backend/secure_vault/media/
+
+# Env files
+.env
+.env.local
+.env.*.local
