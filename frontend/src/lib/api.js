@@ -9,11 +9,25 @@ export const getUsername = () => localStorage.getItem('vorlan_username') || 'Adm
 
 export const isAuthenticated = () => !!getToken();
 
+/**
+ * A random-looking id, without crypto.randomUUID() - that method is restricted to secure
+ * contexts (HTTPS or localhost) and doesn't exist at all when VORLAN is opened over plain HTTP
+ * at a LAN/hotspot address, which is how it's normally reached from a phone. getRandomValues()
+ * has no such restriction.
+ */
+const generateId = () => {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
+
 /** A random id generated once per browser and persisted, so the backend can tell "this device" apart from others for the Connected Devices settings page. */
 export const getDeviceId = () => {
   let id = localStorage.getItem('vorlan_device_id');
   if (!id) {
-    id = crypto.randomUUID();
+    id = generateId();
     localStorage.setItem('vorlan_device_id', id);
   }
   return id;
