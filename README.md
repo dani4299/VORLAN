@@ -16,12 +16,7 @@ VORLAN runs entirely on your own machine — authentication, file storage, and e
 <img width="1920" height="922" alt="Screenshot From 2026-09-03 22-43-49" src="https://github.com/user-attachments/assets/1a46b980-9d76-4280-a75f-eea7b57b5399" />
 
 
-  <p align="center">
-    <img src="docs/screenshots/dashboard.png" width="800" alt="VORLAN dashboard">
-  </p>
-  <p align="center">
- 
-  </p>
+
 
 
 
