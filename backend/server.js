@@ -1,9 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const os = require('os');
 const { PORT } = require('./src/config/constants');
 const { GLOBAL_MEDIA_DIR, PERSONAL_VAULT_DIR } = require('./src/config/paths');
+const { getLocalIp } = require('./src/utils/localIp');
 
 const authRoutes = require('./src/routes/auth.routes');
 const vaultRoutes = require('./src/routes/vault.routes');
@@ -52,15 +52,7 @@ app.listen(PORT, '0.0.0.0', (err) => {
     process.exit(1);
   }
 
-  const nets = os.networkInterfaces();
-  let localIp = 'localhost';
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name]) {
-      if (net.family === 'IPv4' && !net.internal) {
-        localIp = net.address;
-      }
-    }
-  }
+  const localIp = getLocalIp();
 
   console.log('===================================================');
   console.log('VORLAN server online');

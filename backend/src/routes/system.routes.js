@@ -1,10 +1,27 @@
 const express = require('express');
 const os = require('os');
 const si = require('systeminformation');
+const QRCode = require('qrcode');
 const verifyToken = require('../middleware/auth.middleware');
 const storage = require('../services/storage.service');
+const { getLocalIp } = require('../utils/localIp');
 
 const router = express.Router();
+
+// The Vite dev server port phones are already told to visit today - matches the existing
+// manual "type the IP into the browser" process this QR code replaces.
+const FRONTEND_PORT = 5173;
+
+router.get('/connect-qr', verifyToken, async (req, res) => {
+  try {
+    const url = `http://${getLocalIp()}:${FRONTEND_PORT}`;
+    const qr = await QRCode.toDataURL(url);
+    res.json({ url, qr });
+  } catch (err) {
+    console.error('Failed to generate connect QR code:', err);
+    res.status(500).json({ error: "Couldn't generate the QR code. Please try again." });
+  }
+});
 
 router.get('/stats', verifyToken, async (req, res) => {
   const totalMemBytes = os.totalmem();

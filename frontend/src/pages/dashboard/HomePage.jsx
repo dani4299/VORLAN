@@ -7,6 +7,8 @@ import { IconButton } from '../../components/ui/Button';
 import { WallpaperLayer, getWallpaperTextTone } from '../../components/dashboard/WallpaperLayer';
 import { WallpaperSheet } from '../../components/dashboard/WallpaperSheet';
 import { AccountSettingsModal } from '../../components/dashboard/AccountSettingsModal';
+import { ConnectDeviceButton } from '../../components/dashboard/ConnectDeviceButton';
+import { ConnectDeviceModal } from '../../components/dashboard/ConnectDeviceModal';
 import { DigitalClock } from '../../components/dashboard/DigitalClock';
 import { TileGrid } from '../../components/dashboard/TileGrid';
 import { pickGreeting } from '../../lib/greetings';
@@ -23,6 +25,7 @@ export const HomePage = () => {
   }, [fullName]);
   const [wallpaperOpen, setWallpaperOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [tileRows, setTileRows] = useState(1);
   const compact = tileRows > 2;
@@ -76,6 +79,7 @@ export const HomePage = () => {
           <WallpaperSheet anchorRef={wallpaperTriggerRef} onClose={() => setWallpaperOpen(false)} />
         )}
         {accountOpen && <AccountSettingsModal onClose={() => setAccountOpen(false)} />}
+        {connectOpen && <ConnectDeviceModal onClose={() => setConnectOpen(false)} />}
 
         {/*
           Top-aligned, not centered: content height varies with tile count/edit-mode controls, and an
@@ -98,7 +102,8 @@ export const HomePage = () => {
           <TileGrid editMode={editMode} onRowsChange={setTileRows} />
         </div>
 
-        <div className="flex-shrink-0 flex justify-start">
+        <div className="flex-shrink-0 flex justify-between">
+          <ConnectDeviceButton onClick={() => setConnectOpen(true)} overlayTone={textTone} />
           <IconButton
             onClick={() => setEditMode((o) => !o)}
             overlay={!editMode}
