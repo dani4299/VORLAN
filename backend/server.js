@@ -15,6 +15,7 @@ const aiRoutes = require('./src/routes/ai.routes');
 const storageRoutes = require('./src/routes/storage.routes');
 const systemRoutes = require('./src/routes/system.routes');
 const explorerRoutes = require('./src/routes/explorer.routes');
+const devicesRoutes = require('./src/routes/devices.routes');
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/storage', storageRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/explorer', explorerRoutes);
+app.use('/api/devices', devicesRoutes);
 
 app.listen(PORT, '0.0.0.0', (err) => {
   // Express 5 invokes this same callback on a failed bind (e.g. EADDRINUSE), passing the

@@ -22,4 +22,5 @@ module.exports = {
   HISTORY_FILE: path.join(ROOT_DIR, 'ai_history.json'),
   PINS_FILE: path.join(PERSONAL_VAULT_DIR, 'vault_pins.json'),
   DB_FILE: path.join(ROOT_DIR, 'vorlan-secure.db'),
+  DEVICES_FILE: path.join(ROOT_DIR, 'devices.json'),
 };

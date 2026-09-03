@@ -36,6 +36,7 @@ backend/secure_vault/personal/
 backend/secure_vault/media/
 backend/secure_vault/explorer/
 backend/hotspot_config.json
+backend/devices.json
 
 # Env files
 .env

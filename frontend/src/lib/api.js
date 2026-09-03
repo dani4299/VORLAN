@@ -9,8 +9,19 @@ export const getUsername = () => localStorage.getItem('vorlan_username') || 'Adm
 
 export const isAuthenticated = () => !!getToken();
 
+/** A random id generated once per browser and persisted, so the backend can tell "this device" apart from others for the Connected Devices settings page. */
+export const getDeviceId = () => {
+  let id = localStorage.getItem('vorlan_device_id');
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem('vorlan_device_id', id);
+  }
+  return id;
+};
+
 export const authHeaders = (extra = {}) => ({
   Authorization: `Bearer ${getToken()}`,
+  'X-Device-Id': getDeviceId(),
   ...extra,
 });
 

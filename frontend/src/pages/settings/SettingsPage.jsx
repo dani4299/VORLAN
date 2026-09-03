@@ -1,13 +1,21 @@
 import React, { useState } from 'react';
-import { User, Palette } from 'lucide-react';
+import { User, Palette, Smartphone } from 'lucide-react';
 import { BackButton } from '../../components/ui/BackButton';
 import { AccountSettingsForm } from '../../components/dashboard/AccountSettingsForm';
 import { AppearanceSettings } from './AppearanceSettings';
+import { ConnectedDevicesSettings } from './ConnectedDevicesSettings';
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'appearance', label: 'Appearance', icon: Palette },
+  { id: 'devices', label: 'Connected Devices', icon: Smartphone },
 ];
+
+const TAB_COPY = {
+  profile: { title: 'Profile', description: 'Your account details and sign-in' },
+  appearance: { title: 'Appearance', description: 'Choose how VORLAN looks across every screen' },
+  devices: { title: 'Connected Devices', description: 'Devices signed in to your account, and how much data each has used' },
+};
 
 export const SettingsPage = () => {
   const [tab, setTab] = useState('profile');
@@ -50,15 +58,15 @@ export const SettingsPage = () => {
 
       <div className="flex-1 overflow-y-auto flex justify-center pt-20 pb-10 md:py-10">
         <div className="w-[80%] max-w-3xl">
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--ink)] mb-1">{tab === 'profile' ? 'Profile' : 'Appearance'}</h1>
-          <p className="text-sm text-[var(--ink-muted)] mb-8">
-            {tab === 'profile' ? 'Your account details and sign-in' : 'Choose how VORLAN looks across every screen'}
-          </p>
-          {tab === 'profile' ? (
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--ink)] mb-1">{TAB_COPY[tab].title}</h1>
+          <p className="text-sm text-[var(--ink-muted)] mb-8">{TAB_COPY[tab].description}</p>
+          {tab === 'profile' && (
             <div className="glass rounded-[24px] p-6 md:p-7 max-w-lg">
               <AccountSettingsForm />
             </div>
-          ) : <AppearanceSettings />}
+          )}
+          {tab === 'appearance' && <AppearanceSettings />}
+          {tab === 'devices' && <ConnectedDevicesSettings />}
         </div>
       </div>
     </div>
