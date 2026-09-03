@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=VORLAN
+Comment=Smart home and network management
+Exec=__INSTALL_DIR__/launch.sh
+Icon=__INSTALL_DIR__/frontend/public/logo.jpeg
+Terminal=false
+Categories=Network;
