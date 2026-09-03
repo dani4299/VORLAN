@@ -1,20 +1,25 @@
 const express = require('express');
+const fs = require('fs');
 const os = require('os');
 const si = require('systeminformation');
 const QRCode = require('qrcode');
 const verifyToken = require('../middleware/auth.middleware');
 const storage = require('../services/storage.service');
 const { getLocalIp } = require('../utils/localIp');
+const { PORT } = require('../config/constants');
+const { FRONTEND_INDEX_HTML } = require('../config/paths');
 
 const router = express.Router();
 
-// The Vite dev server port phones are already told to visit today - matches the existing
-// manual "type the IP into the browser" process this QR code replaces.
-const FRONTEND_PORT = 5173;
+// The Vite dev server port phones are told to visit in dev mode, matching the existing manual
+// "type the IP into the browser" process this QR code replaces. An installed copy (a production
+// build present) serves the frontend from the backend's own port instead - see server.js.
+const DEV_FRONTEND_PORT = 5173;
 
 router.get('/connect-qr', verifyToken, async (req, res) => {
   try {
-    const url = `http://${getLocalIp()}:${FRONTEND_PORT}`;
+    const port = fs.existsSync(FRONTEND_INDEX_HTML) ? PORT : DEV_FRONTEND_PORT;
+    const url = `http://${getLocalIp()}:${port}`;
     const qr = await QRCode.toDataURL(url);
     res.json({ url, qr });
   } catch (err) {

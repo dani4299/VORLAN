@@ -1,8 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const { PORT } = require('./src/config/constants');
-const { GLOBAL_MEDIA_DIR, PERSONAL_VAULT_DIR } = require('./src/config/paths');
+const { GLOBAL_MEDIA_DIR, PERSONAL_VAULT_DIR, FRONTEND_DIST_DIR, FRONTEND_INDEX_HTML } = require('./src/config/paths');
 const { getLocalIp } = require('./src/utils/localIp');
 
 const authRoutes = require('./src/routes/auth.routes');
@@ -40,6 +41,18 @@ app.use('/api/storage', storageRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/explorer', explorerRoutes);
 app.use('/api/devices', devicesRoutes);
+
+// Serves the frontend's production build when one exists (an installed copy of VORLAN) - a plain
+// dev checkout with no build present skips this entirely, so `npm start`'s Vite dev server
+// workflow is completely unaffected. BrowserRouter is used on the frontend, so any non-API,
+// non-media route needs to fall back to index.html for client-side routing to work - otherwise a
+// phone opening a deep link like /dashboard/ai directly would get a 404 instead of the app shell.
+if (fs.existsSync(FRONTEND_INDEX_HTML)) {
+  app.use(express.static(FRONTEND_DIST_DIR));
+  app.get(/^(?!\/api|\/media).*/, (req, res) => {
+    res.sendFile(FRONTEND_INDEX_HTML);
+  });
+}
 
 app.listen(PORT, '0.0.0.0', (err) => {
   // Express 5 invokes this same callback on a failed bind (e.g. EADDRINUSE), passing the
