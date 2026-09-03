@@ -28,10 +28,13 @@ lerna-debug.log*
 
 # Real user data - do not commit
 backend/vorlan-secure.db
+backend/vorlan.db
 backend/profiles.json
+backend/ai_history.json
 backend/secure_vault/notes_matrix.json
 backend/secure_vault/personal/
 backend/secure_vault/media/
+backend/secure_vault/explorer/
 backend/hotspot_config.json
 
 # Env files

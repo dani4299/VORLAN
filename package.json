@@ -1,4 +1,9 @@
 {
+  "name": "vorlan-master",
+  "private": true,
+  "scripts": {
+    "start": "concurrently -k -n BACKEND,FRONTEND -c blue,green \"npm run start --prefix backend\" \"npm run dev --prefix frontend\""
+  },
   "dependencies": {
     "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
@@ -8,5 +13,8 @@
     "multer": "^2.2.0",
     "node-media-server": "^4.2.8",
     "sqlite3": "^6.0.1"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
   }
 }

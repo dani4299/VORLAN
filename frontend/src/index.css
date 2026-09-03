@@ -1,115 +1,246 @@
+@import "tailwindcss";
 
-:root {
-  
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-  
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
-}
-
-
-@media (prefers-color-scheme: dark) {
+/*
+ * Custom rules below live in @layer base / @layer components so that Tailwind
+ * utility classes (which Tailwind puts in its own, higher-priority "utilities"
+ * layer) can always override them — e.g. `.fixed` on an element that also has
+ * `.glass-strong` must still win. Without an explicit layer, plain CSS always
+ * beats layered CSS regardless of source order or specificity, which silently
+ * broke every Tailwind utility applied alongside a custom class.
+ */
+@layer base {
   :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+    color-scheme: dark;
+
+    /* Canvas */
+    --canvas: #08090b;
+    --canvas-elevated: #0e0f12;
+
+    /* Ink */
+    --ink: #f4f5f7;
+    --ink-muted: #91959e;
+    --ink-faint: #55585f;
+
+    /* Accent — the single interactive color */
+    --accent: #4c8dff;
+    --accent-strong: #2f6fe0;
+    --accent-wash: rgba(76, 141, 255, 0.16);
+
+    /* Identity hues — section/icon color only, never buttons */
+    --hue-violet: #9c6bff;
+    --hue-amber: #ffb454;
+    --hue-rose: #ff6482;
+    --hue-emerald: #34d399;
+
+    /* Flat surface material — cards and panels */
+    --surface-border: rgba(255, 255, 255, 0.08);
+    --surface-border-strong: rgba(255, 255, 255, 0.12);
+
+    /* Neutral overlay tints — subtle fills/borders on top of a surface (icon chips, inputs, dividers).
+       Flip sign in light mode below so they darken instead of lighten. */
+    --overlay-1: rgba(255, 255, 255, 0.05);
+    --overlay-2: rgba(255, 255, 255, 0.06);
+    --overlay-3: rgba(255, 255, 255, 0.08);
+    --overlay-4: rgba(255, 255, 255, 0.1);
+    --overlay-5: rgba(255, 255, 255, 0.2);
+    --scrim-strong: rgba(0, 0, 0, 0.6);
+
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
+  /*
+   * Light theme. Applied via [data-theme="light"] on <html>, set by ThemeContext. Dark stays the
+   * bare :root default above since that's this app's native look; light is the opt-in override.
+   */
+  :root[data-theme='light'] {
+    color-scheme: light;
+
+    --canvas: #eef0f3;
+    --canvas-elevated: #ffffff;
+
+    --ink: #14161a;
+    --ink-muted: #62666f;
+    --ink-faint: #9a9ea6;
+
+    --accent-wash: rgba(47, 111, 224, 0.12);
+
+    --surface-border: rgba(15, 17, 21, 0.08);
+    --surface-border-strong: rgba(15, 17, 21, 0.14);
+
+    --overlay-1: rgba(15, 17, 21, 0.035);
+    --overlay-2: rgba(15, 17, 21, 0.045);
+    --overlay-3: rgba(15, 17, 21, 0.065);
+    --overlay-4: rgba(15, 17, 21, 0.08);
+    --overlay-5: rgba(15, 17, 21, 0.16);
+    --scrim-strong: rgba(15, 17, 21, 0.45);
+  }
+
+  /*
+   * Accent color schemes. Applied via [data-scheme] on <html>, set by ThemeContext, independent
+   * of light/dark - only --accent/--accent-strong/--accent-wash change, so this works layered on
+   * top of either theme block above. Blue is the bare-:root default (no attribute needed for it).
+   */
+  :root[data-scheme='grey'] {
+    --accent: #8b8f98;
+    --accent-strong: #6b6f78;
+    --accent-wash: rgba(139, 143, 152, 0.16);
+  }
+  :root[data-scheme='violet'] {
+    --accent: #9c6bff;
+    --accent-strong: #7c4fe0;
+    --accent-wash: rgba(156, 107, 255, 0.16);
+  }
+  :root[data-scheme='emerald'] {
+    --accent: #34d399;
+    --accent-strong: #1fae7a;
+    --accent-wash: rgba(52, 211, 153, 0.16);
+  }
+  :root[data-scheme='rose'] {
+    --accent: #ff6482;
+    --accent-strong: #e0445f;
+    --accent-wash: rgba(255, 100, 130, 0.16);
+  }
+  :root[data-scheme='amber'] {
+    --accent: #ffb454;
+    --accent-strong: #e0952f;
+    --accent-wash: rgba(255, 180, 84, 0.16);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    background: var(--canvas);
+    color: var(--ink);
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--overlay-4);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--overlay-5);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 }
 
-body {
-  margin: 0;
-}
+/* ==========================================
+   FLAT SURFACE MATERIAL
+   ========================================== */
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+@layer components {
+  .glass,
+  .glass-strong {
+    position: relative;
+    background: var(--canvas-elevated);
+    border: 1px solid var(--surface-border);
+    box-shadow: 0 20px 40px -28px rgba(0, 0, 0, 0.6);
   }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+
+  .glass-strong {
+    border-color: var(--surface-border-strong);
   }
-}
-p {
-  margin: 0;
-}
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
+  /* Theme-reactive replacement for the old hardcoded bg-white/[x] + border-white/[x] chip pattern. */
+  .chip {
+    background: var(--overlay-2);
+    border: 1px solid var(--overlay-3);
+  }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  /* Theme-reactive modal/sheet backdrop - was hardcoded bg-black/60. */
+  .scrim {
+    background: var(--scrim-strong);
+  }
+
+  /* Always a translucent white chip, regardless of theme - for controls floating on a wallpaper image. */
+  .icon-btn-overlay {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .icon-btn-overlay:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  .icon-btn-overlay-hover:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  /* Dark-icon counterpart, for controls floating on a wallpaper bright enough to need dark icons. */
+  .icon-btn-overlay-dark {
+    background: rgba(15, 17, 21, 0.07);
+  }
+  .icon-btn-overlay-dark:hover {
+    background: rgba(15, 17, 21, 0.14);
+  }
+  .icon-btn-overlay-hover-dark:hover {
+    background: rgba(15, 17, 21, 0.07);
+  }
+
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(-10px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .animate-toast-in {
+    animation: toast-in 0.22s ease-out;
+  }
+
+  @keyframes sheet-in {
+    from { opacity: 0; transform: translateY(16px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .animate-sheet-in {
+    animation: sheet-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .animate-sheet-up {
+    animation: sheet-up 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes message-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-message-in {
+    animation: message-in 0.25s ease-out;
+  }
+
+  @keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.15; }
+  }
+  .animate-cursor-blink {
+    animation: cursor-blink 0.9s ease-in-out infinite;
+  }
+
+  @keyframes tile-wiggle {
+    0%, 100% { transform: rotate(-0.6deg); }
+    50% { transform: rotate(0.6deg); }
+  }
+  .animate-tile-wiggle {
+    animation: tile-wiggle 0.22s ease-in-out infinite;
+  }
 }
