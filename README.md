@@ -77,6 +77,27 @@ The original VORLAN (still the foundation this is built on) shipped as a single 
 - **AI:** [Ollama](https://ollama.com) running the `phi3` model, entirely local
 - **Networking:** `nmcli` / NetworkManager for the in-progress device-onboarding feature (Linux only, for now)
 
+## Install on Linux
+
+A one-click installer is available for Fedora and Debian/Ubuntu - it installs
+Node.js, Ollama (with the `phi3` model), and
+[linux-wifi-hotspot](https://github.com/lakinduakash/linux-wifi-hotspot) for
+phone/tablet access, then adds VORLAN to your application menu.
+
+> This repo is currently private, so there's no public download link yet -
+> a direct "click and download" link only works once the repo (or at least
+> the installer release) is public. For now, if you have access to this
+> repo:
+
+```bash
+git clone https://github.com/dani4299/VORLAN.git
+chmod +x VORLAN/installer/install.sh
+./VORLAN/installer/install.sh
+```
+
+See [`installer/README.md`](installer/README.md) for details, supported
+systems, and troubleshooting.
+
 ## Getting Started
 
 ### Prerequisites
