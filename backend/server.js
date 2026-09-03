@@ -39,7 +39,19 @@ app.use('/api/storage', storageRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/explorer', explorerRoutes);
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', (err) => {
+  // Express 5 invokes this same callback on a failed bind (e.g. EADDRINUSE), passing the
+  // error as the first argument, instead of emitting an unhandled 'error' event - without this
+  // check a port conflict prints the banner below as if the server started, then the process
+  // exits silently seconds later with no other indication anything went wrong.
+  if (err) {
+    console.error(`Failed to start VORLAN server on port ${PORT}: ${err.message}`);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Something else is already listening on port ${PORT}. Stop it, or set PORT to a different value, then try again.`);
+    }
+    process.exit(1);
+  }
+
   const nets = os.networkInterfaces();
   let localIp = 'localhost';
   for (const name of Object.keys(nets)) {
