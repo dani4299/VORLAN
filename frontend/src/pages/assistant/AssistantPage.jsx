@@ -196,7 +196,11 @@ export const AssistantPage = () => {
 
         <div className="flex-1 overflow-y-auto px-4 md:px-10" ref={scrollRef}>
           <div className="max-w-3xl mx-auto space-y-6 pb-40">
-            {messages.map((msg, i) => (
+            {messages.map((msg, i) => {
+              // Pending placeholder for a not-yet-started reply - rendering it here too would
+              // double up with the "typing" indicator below, which represents this exact state.
+              if (msg.streaming && msg.content === '' && i === messages.length - 1) return null;
+              return (
               <div key={i} className={`animate-message-in flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'system' && (
                   <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden shadow-md">
@@ -216,7 +220,8 @@ export const AssistantPage = () => {
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
             {isTyping && messages[messages.length - 1]?.content === '' && (
               <div className="flex gap-3">
                 <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center flex-shrink-0 overflow-hidden shadow-md">
