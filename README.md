@@ -8,7 +8,7 @@ VORLAN runs entirely on your own machine — authentication, file storage, and e
 
 ## Screenshots
 
-<!--
+
 <img width="1920" height="922" alt="Screenshot From 2026-09-03 22-40-18" src="https://github.com/user-attachments/assets/cfe7c5de-ab56-4494-8d75-b2ba194f8ea7" />
 <img width="1920" height="922" alt="Screenshot From 2026-09-03 22-40-56" src="https://github.com/user-attachments/assets/3c78a054-eed2-44c2-9912-8adef97d7a1f" />
 <img width="1920" height="922" alt="Screenshot From 2026-09-03 22-41-37" src="https://github.com/user-attachments/assets/3b4cd568-356c-4b5a-a97e-9debb91186a0" />
@@ -23,9 +23,7 @@ VORLAN runs entirely on your own machine — authentication, file storage, and e
     <img src="docs/screenshots/ai-assistant.png" width="400" alt="AI assistant">
     <img src="docs/screenshots/file-manager.png" width="400" alt="File manager">
   </p>
--->
 
-*(Screenshots coming soon.)*
 
 ---
 
