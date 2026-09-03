@@ -50,7 +50,12 @@ export const mergeDashboardLayout = (saved) => {
   const coreIds = ALL_TILES.filter((t) => t.core).map((t) => t.id);
   order = [...coreIds, ...order.filter((id) => !coreIds.includes(id))];
 
-  const sizes = { ...Object.fromEntries(ALL_TILES.map((t) => [t.id, t.defaultSize])), ...base.sizes };
+  // Core tiles have no resize handle in the UI, so they always render at their catalog size -
+  // a saved override (e.g. from before core tiles were locked to a fixed size) is ignored.
+  const sizes = {
+    ...Object.fromEntries(ALL_TILES.map((t) => [t.id, t.defaultSize])),
+    ...Object.fromEntries(Object.entries(base.sizes || {}).filter(([id]) => !TILES_BY_ID[id]?.core)),
+  };
   const available = ALL_TILE_IDS.filter((id) => !order.includes(id));
   return { order, sizes, dismissed: [...dismissed], available };
 };
