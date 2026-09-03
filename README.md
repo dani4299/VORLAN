@@ -20,8 +20,7 @@ VORLAN runs entirely on your own machine — authentication, file storage, and e
     <img src="docs/screenshots/dashboard.png" width="800" alt="VORLAN dashboard">
   </p>
   <p align="center">
-    <img src="docs/screenshots/ai-assistant.png" width="400" alt="AI assistant">
-    <img src="docs/screenshots/file-manager.png" width="400" alt="File manager">
+ 
   </p>
 
 
