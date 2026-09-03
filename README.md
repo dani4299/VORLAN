@@ -9,8 +9,12 @@ VORLAN runs entirely on your own machine — authentication, file storage, and e
 ## Screenshots
 
 <!--
-  Add screenshots here — a few from the dashboard, the AI assistant, the file
-  manager, and settings would give newcomers the clearest picture.
+<img width="1920" height="922" alt="Screenshot From 2026-09-03 22-40-18" src="https://github.com/user-attachments/assets/cfe7c5de-ab56-4494-8d75-b2ba194f8ea7" />
+<img width="1920" height="922" alt="Screenshot From 2026-09-03 22-40-56" src="https://github.com/user-attachments/assets/3c78a054-eed2-44c2-9912-8adef97d7a1f" />
+<img width="1920" height="922" alt="Screenshot From 2026-09-03 22-41-37" src="https://github.com/user-attachments/assets/3b4cd568-356c-4b5a-a97e-9debb91186a0" />
+<img width="1920" height="922" alt="Screenshot From 2026-09-03 22-43-16" src="https://github.com/user-attachments/assets/d0ddeecf-840e-4bdf-b2f2-9653ce033750" />
+<img width="1920" height="922" alt="Screenshot From 2026-09-03 22-43-49" src="https://github.com/user-attachments/assets/1a46b980-9d76-4280-a75f-eea7b57b5399" />
+
 
   <p align="center">
     <img src="docs/screenshots/dashboard.png" width="800" alt="VORLAN dashboard">
