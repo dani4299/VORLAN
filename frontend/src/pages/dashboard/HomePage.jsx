@@ -82,13 +82,15 @@ export const HomePage = () => {
         {connectOpen && <ConnectDeviceModal onClose={() => setConnectOpen(false)} />}
 
         {/*
-          Top-aligned, not centered: content height varies with tile count/edit-mode controls, and an
-          ancestor still clips overflow to keep the page scroll-free. Centering would clip symmetrically
-          top+bottom whenever content grows past the available space, silently hiding/disabling whatever
-          sits at the top (the edit-mode controls did exactly this). Top-aligning means any clipping in
-          an extreme case only ever eats into empty space at the bottom, never the controls above it.
+          Top-aligned, not centered: content height varies with tile count/edit-mode controls.
+          Centering would clip symmetrically top+bottom once content overflows, silently
+          hiding/disabling whatever sits at the top (the edit-mode controls did exactly this).
+          Top-aligning means any overflow only ever pushes into scrollable space below, never the
+          controls above it. Compact mode (reduced gaps/padding) shrinks content first when there
+          are many tiles; overflow-y-auto is the fallback for phone-sized viewports where even
+          compact mode still doesn't leave enough room to show every tile.
         */}
-        <div className={`flex-1 min-h-0 flex flex-col items-center overflow-hidden transition-all duration-300 ${compact ? 'gap-2 py-2' : 'gap-6 py-4'}`}>
+        <div className={`flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto transition-all duration-300 ${compact ? 'gap-2 py-2' : 'gap-6 py-4'}`}>
           <div className={`flex flex-col items-center flex-shrink-0 transition-all duration-300 ${compact ? 'gap-1' : 'gap-3'}`}>
             <DigitalClock compact={compact} tone={textTone} />
             <p
