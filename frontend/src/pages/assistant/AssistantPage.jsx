@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Plus, Send, Trash2 } from 'lucide-react';
-import api, { API_BASE, authHeaders } from '../../lib/api';
+import api, { authedFetch, authHeaders } from '../../lib/api';
 import { Button, IconButton } from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { SelectField } from '../../components/ui/Field';
@@ -128,9 +128,9 @@ export const AssistantPage = () => {
 
     let fullReply = '';
     try {
-      const res = await fetch(`${API_BASE}/ai/ask`, {
+      const res = await authedFetch('/ai/ask', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: userMessage }),
       });
       if (!res.ok || !res.body) throw new Error('The assistant stream failed to start.');

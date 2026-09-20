@@ -55,7 +55,7 @@ export const Network = () => {
   else {
     body = (
       <div className="divide-y divide-[var(--surface-border)]">
-        <Section title="Open VORLAN from another device" description="Type one of these addresses into a browser on the same network.">
+        <Section title="Open VORLAN from another device" description={data.urls.some((u) => u.secure) ? 'Type one of these addresses into a browser on the same network. The first visit shows a certificate warning: check it against the fingerprint in Support before continuing.' : 'Type one of these addresses into a browser on the same network.'}>
           {data.urls.length === 0 ? (
             <p className="text-sm text-[var(--ink-muted)]">This computer isn't connected to a network, so there's no address to share.</p>
           ) : (
@@ -85,6 +85,7 @@ export const Network = () => {
               { label: 'Gateway', value: data.gateway },
               { label: 'DNS servers', value: data.dnsServers.length ? data.dnsServers.join(', ') : null },
               { label: 'VORLAN port', value: data.port },
+              ...(data.httpsPort ? [{ label: 'Secure (HTTPS) port', value: data.httpsPort }] : []),
             ]}
           />
         </Section>

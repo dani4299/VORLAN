@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { KeyRound, Plus, Trash2 } from 'lucide-react';
+import { KeyRound, LogOut, Plus, Trash2 } from 'lucide-react';
 import { WindowLayout } from '../../components/layout/WindowLayout';
 import { Button, IconButton } from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -8,7 +8,7 @@ import { ErrorState } from '../../components/ui/ErrorState';
 import { TextField } from '../../components/ui/Field';
 import { Spinner } from '../../components/ui/Spinner';
 import { useToast } from '../../context/ToastContext';
-import { changeUserRole, errorMessage, listUsers } from '../../lib/adminApi';
+import { changeUserRole, errorMessage, listUsers, signUserOut } from '../../lib/adminApi';
 import { getUsername, setRole } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
 import { usePolling } from '../../lib/usePolling';
@@ -26,6 +26,7 @@ export const UsersPanel = () => {
   const [search, setSearch] = useState('');
   const [dialog, setDialog] = useState(null); // { type: 'create' | 'reset' | 'delete' | 'demote-self', user?, role? }
   const [savingRole, setSavingRole] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const me = getUsername();
 
   const rows = useMemo(() => {
@@ -50,6 +51,19 @@ export const UsersPanel = () => {
       showToast(errorMessage(err, "Couldn't change the role."), 'error');
     } finally {
       setSavingRole(false);
+      setDialog(null);
+    }
+  };
+
+  const confirmSignOut = async () => {
+    setSigningOut(true);
+    try {
+      const ended = await signUserOut(dialog.user.id);
+      showToast(ended ? `Signed ${dialog.user.username} out of ${ended} ${ended === 1 ? 'device' : 'devices'}.` : `${dialog.user.username} wasn't signed in anywhere.`, 'success');
+    } catch (err) {
+      showToast(errorMessage(err, "Couldn't sign that account out."), 'error');
+    } finally {
+      setSigningOut(false);
       setDialog(null);
     }
   };
@@ -89,6 +103,7 @@ export const UsersPanel = () => {
       render: (u) => (
         <div className="flex justify-end gap-0.5">
           <IconButton label={`Reset password for ${u.username}`} onClick={() => setDialog({ type: 'reset', user: u })}><KeyRound size={16} aria-hidden="true" /></IconButton>
+          <IconButton label={u.username === me ? 'Sign out of your other devices' : `Sign ${u.username} out everywhere`} onClick={() => setDialog({ type: 'signout', user: u })}><LogOut size={16} aria-hidden="true" /></IconButton>
           <IconButton label={`Delete ${u.username}`} disabled={u.username === me} onClick={() => setDialog({ type: 'delete', user: u })} className="disabled:opacity-40 disabled:cursor-not-allowed"><Trash2 size={16} aria-hidden="true" /></IconButton>
         </div>
       ),
@@ -122,6 +137,16 @@ export const UsersPanel = () => {
       )}
       {dialog?.type === 'reset' && (
         <ResetPasswordDialog user={dialog.user} onClose={() => setDialog(null)} onDone={(name) => { setDialog(null); showToast(`Changed the password for ${name}.`, 'success'); }} />
+      )}
+      {dialog?.type === 'signout' && (
+        <ConfirmDialog
+          title={dialog.user.username === me ? 'Sign out of your other devices?' : `Sign ${dialog.user.username} out everywhere?`}
+          message={dialog.user.username === me ? 'This window stays signed in. Every other browser and phone signed in as you is signed out.' : 'Every browser and phone signed in as this account is signed out at once. They can sign in again with their password.'}
+          confirmLabel="Sign out"
+          loading={signingOut}
+          onConfirm={confirmSignOut}
+          onCancel={() => setDialog(null)}
+        />
       )}
       {dialog?.type === 'delete' && (
         <DeleteUserDialog user={dialog.user} onClose={() => setDialog(null)} onDone={(name) => { setDialog(null); showToast(`Deleted the account ${name}.`, 'success'); reload(); }} />

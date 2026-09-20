@@ -29,7 +29,7 @@ export const AuthForm = ({ isLogin }) => {
       if (isLogin) {
         const token = response.data.token || response.data.accessToken;
         if (token) {
-          saveSession(token, response.data.role, username);
+          saveSession(token, response.data.role, response.data.username || username, response.data.refreshToken);
           window.location.href = '/dashboard';
         } else {
           setError('Something went wrong signing you in. Please try again.');
@@ -64,6 +64,7 @@ export const AuthForm = ({ isLogin }) => {
             <TextField
               label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
               autoComplete={isLogin ? 'current-password' : 'new-password'}
+              minLength={isLogin ? undefined : 8} hint={isLogin ? undefined : 'At least 8 characters.'}
             />
             {error && <p role="alert" className="text-sm text-[var(--danger)]">{error}</p>}
             <Button type="submit" size="lg" loading={loading} className="w-full">{isLogin ? 'Sign in' : 'Create account'}</Button>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, AlertCircle, X } from 'lucide-react';
-import api, { getUsername } from '../../../lib/api';
+import api, { getUsername, VAULT_LOCKED_EVENT } from '../../../lib/api';
 import { GlassPanel } from '../../components/ui/GlassPanel';
 import { Button } from '../../components/ui/Button';
 import { Spinner } from '../../../components/ui/Spinner';
@@ -41,6 +41,13 @@ export const PersonalVaultPage = () => {
       .finally(() => setLoading(false));
   }, [activeUser]);
 
+  // The server relocks the vault after a quiet spell: back to the keypad.
+  useEffect(() => {
+    const relock = () => { setIsUnlocked(false); setPin(''); };
+    window.addEventListener(VAULT_LOCKED_EVENT, relock);
+    return () => window.removeEventListener(VAULT_LOCKED_EVENT, relock);
+  }, []);
+
   const handlePinPress = (num) => {
     if (pin.length >= 6) return;
     const newPin = pin + num;
@@ -70,7 +77,7 @@ export const PersonalVaultPage = () => {
       const res = await api.post('/personal/pin', { username: activeUser, pin: completedPin });
       if (res.data.success) setIsUnlocked(true);
     } catch (err) {
-      setError('Incorrect PIN');
+      setError(err.response?.data?.error || 'Incorrect PIN');
       setTimeout(() => setPin(''), 1000);
     }
   };

@@ -27,8 +27,9 @@ export const useMetrics = (range) => {
   return useMemo(() => {
     if (!data) return { points: [], domain: null, loading: !error, error };
     const points = data.points.map((p) => ({ ...p, memPct: p.memTotal ? (p.memUsed / p.memTotal) * 100 : null }));
+    // Judge by the data, not the requested range: for one render after the range changes, `data` is still the old range's answer.
     let domain;
-    if (live) {
+    if (typeof data.from !== 'number') {
       const now = Math.floor(Date.now() / 1000);
       const to = Math.max(now, points.length ? points[points.length - 1].t : now);
       domain = { from: to - 900, to };
@@ -36,5 +37,5 @@ export const useMetrics = (range) => {
       domain = { from: data.from, to: data.to };
     }
     return { points, domain, loading: false, error };
-  }, [data, error, live]);
+  }, [data, error]);
 };

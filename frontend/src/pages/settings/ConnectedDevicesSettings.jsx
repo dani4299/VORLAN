@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Pencil } from 'lucide-react';
+import { LogOut, Pencil } from 'lucide-react';
+import { Badge } from '../../components/ui/Badge';
 import { Button, IconButton } from '../../components/ui/Button';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { DataTable } from '../../components/ui/DataTable';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { TextField } from '../../components/ui/Field';
@@ -9,6 +11,7 @@ import { Spinner } from '../../components/ui/Spinner';
 import { useToast } from '../../context/ToastContext';
 import { listDevices, renameDevice, isThisDevice } from '../../lib/devicesApi';
 import { formatBytes, formatDateTime, formatRelativeTime } from '../../lib/format';
+import { endMySession, listMySessions, signOutOtherDevices } from '../../lib/sessionsApi';
 import { usePolling } from '../../lib/usePolling';
 
 const RenameDialog = ({ device, onClose, onRenamed }) => {
@@ -45,11 +48,46 @@ const RenameDialog = ({ device, onClose, onRenamed }) => {
   );
 };
 
-/** Every browser and phone signed in to this account, and how much data each has used. */
+const loadDevices = async () => {
+  const [devices, sessions] = await Promise.all([listDevices(), listMySessions()]);
+  return { devices, sessions };
+};
+
+/** Every browser and phone signed in to this account, whether it still is, and how much data each has used. */
 export const ConnectedDevicesSettings = () => {
   const showToast = useToast();
-  const { data: devices, error, reload } = usePolling(listDevices, 15000);
+  const { data, error, reload } = usePolling(loadDevices, 15000);
   const [renaming, setRenaming] = useState(null);
+  const [pending, setPending] = useState(null); // { device } or { all: true } awaiting confirmation
+  const [working, setWorking] = useState(false);
+  const devices = data?.devices;
+
+  // The most recently used live sign-in for each device (a device has one, but be forgiving).
+  const signInByDevice = useMemo(() => {
+    const map = new Map();
+    (data?.sessions || []).forEach((s) => { if (!map.has(s.deviceId)) map.set(s.deviceId, s); });
+    return map;
+  }, [data]);
+  const otherSignIns = (data?.sessions || []).filter((s) => !s.current);
+
+  const confirmSignOut = async () => {
+    setWorking(true);
+    try {
+      if (pending.all) {
+        const ended = await signOutOtherDevices();
+        showToast(`Signed out of ${ended} other ${ended === 1 ? 'device' : 'devices'}.`, 'success');
+      } else {
+        await endMySession(signInByDevice.get(pending.device.id).id);
+        showToast(`Signed out ${pending.device.label}.`, 'success');
+      }
+      reload();
+    } catch (err) {
+      showToast(err.response?.data?.error || "Couldn't sign out. Please try again.", 'error');
+    } finally {
+      setWorking(false);
+      setPending(null);
+    }
+  };
 
   const columns = useMemo(() => [
     {
@@ -61,19 +99,36 @@ export const ConnectedDevicesSettings = () => {
       render: (d) => <time dateTime={new Date(d.lastSeen).toISOString()} title={formatDateTime(d.lastSeen)}>{formatRelativeTime(d.lastSeen)}</time>,
       className: 'whitespace-nowrap',
     },
+    {
+      key: 'status', header: 'Sign-in',
+      sortValue: (d) => (signInByDevice.get(d.id)?.current ? 2 : signInByDevice.has(d.id) ? 1 : 0),
+      render: (d) => (signInByDevice.get(d.id) ? <Badge tone="success">Signed in</Badge> : <span className="text-[var(--ink-muted)]">Signed out</span>),
+      className: 'whitespace-nowrap',
+    },
     { key: 'ip', header: 'Address', sortValue: (d) => d.ip || '', render: (d) => d.ip || 'Unknown', className: 'tabular-nums' },
     { key: 'bytes', header: 'Data used', align: 'right', sortValue: (d) => d.bytes, render: (d) => formatBytes(d.bytes), className: 'tabular-nums whitespace-nowrap' },
     {
       key: 'actions', header: <span className="sr-only">Actions</span>, align: 'right',
-      render: (d) => <IconButton label={`Rename ${d.label}`} onClick={() => setRenaming(d)}><Pencil size={15} aria-hidden="true" /></IconButton>,
+      render: (d) => (
+        <div className="flex justify-end gap-0.5">
+          <IconButton label={`Rename ${d.label}`} onClick={() => setRenaming(d)}><Pencil size={15} aria-hidden="true" /></IconButton>
+          {signInByDevice.get(d.id) && !signInByDevice.get(d.id).current && (
+            <IconButton label={`Sign out ${d.label}`} onClick={() => setPending({ device: d })}><LogOut size={15} aria-hidden="true" /></IconButton>
+          )}
+        </div>
+      ),
     },
-  ], []);
+  ], [signInByDevice]);
 
   if (error && !devices) return <ErrorState message={error} onRetry={reload} />;
   if (!devices) return <div className="flex justify-center py-10"><Spinner label="Loading your devices" /></div>;
 
   return (
     <>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <p className="text-sm text-[var(--ink-muted)] max-w-md">Signed in means that device can open VORLAN as you without a password. Sign out any you don't recognise or no longer use.</p>
+        <Button variant="secondary" size="sm" disabled={otherSignIns.length === 0} onClick={() => setPending({ all: true })}>Sign out other devices</Button>
+      </div>
       <DataTable
         caption="Your connected devices"
         columns={columns}
@@ -82,6 +137,16 @@ export const ConnectedDevicesSettings = () => {
         initialSort={{ key: 'lastSeen', dir: 'desc' }}
         empty="No devices yet. Devices that sign in to your account will show up here."
       />
+      {pending && (
+        <ConfirmDialog
+          title={pending.all ? 'Sign out of your other devices?' : `Sign out ${pending.device.label}?`}
+          message={pending.all ? 'Every other browser and phone signed in as you is signed out. This one stays signed in.' : 'That device is signed out straight away and will ask for your password next time.'}
+          confirmLabel="Sign out"
+          loading={working}
+          onConfirm={confirmSignOut}
+          onCancel={() => setPending(null)}
+        />
+      )}
       {renaming && (
         <RenameDialog
           device={renaming}

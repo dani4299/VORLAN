@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api, { getUsername } from '../../lib/api';
+import api, { getUsername, VAULT_LOCKED_EVENT } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { TextField } from '../../components/ui/Field';
@@ -32,6 +32,13 @@ export const PersonalVaultPage = () => {
 
   useEffect(() => { checkPin(); }, [activeUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The server relocks the vault after a quiet spell: show the PIN screen again instead of a page of failed requests.
+  useEffect(() => {
+    const relock = () => { setIsUnlocked(false); setPin(''); setError('Your private space locked itself. Enter your PIN to open it again.'); };
+    window.addEventListener(VAULT_LOCKED_EVENT, relock);
+    return () => window.removeEventListener(VAULT_LOCKED_EVENT, relock);
+  }, []);
+
   const onPinChange = (e) => {
     setPin(e.target.value.replace(/\D/g, '').slice(0, PIN_LENGTH));
     setError('');
@@ -56,8 +63,8 @@ export const PersonalVaultPage = () => {
     try {
       const res = await api.post('/personal/pin', { username: activeUser, pin });
       if (res.data.success) setIsUnlocked(true);
-    } catch {
-      setError('Incorrect PIN.');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Incorrect PIN.');
       setPin('');
     } finally {
       setBusy(false);

@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Palette, Smartphone, User } from 'lucide-react';
+import { Lock, Palette, Smartphone, User } from 'lucide-react';
 import { AccountSettingsForm } from '../../components/dashboard/AccountSettingsForm';
 import { TabPanel, Tabs } from '../../components/ui/Tabs';
 import { useElementWidth } from '../../lib/useElementWidth';
 import { AppearanceSettings } from './AppearanceSettings';
 import { ConnectedDevicesSettings } from './ConnectedDevicesSettings';
+import { SecuritySettings } from './SecuritySettings';
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
+  { id: 'security', label: 'Password', icon: Lock },
   { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'devices', label: 'Connected devices', icon: Smartphone },
 ];
@@ -34,6 +36,7 @@ export const SettingsPage = () => {
         <div className="max-w-2xl">
           <h1 className="text-lg font-semibold text-[var(--ink)] mb-4">{heading}</h1>
           <TabPanel idPrefix="settings" id="profile" value={tab}><div className="max-w-md"><AccountSettingsForm /></div></TabPanel>
+          <TabPanel idPrefix="settings" id="security" value={tab}><SecuritySettings /></TabPanel>
           <TabPanel idPrefix="settings" id="appearance" value={tab}><AppearanceSettings /></TabPanel>
           <TabPanel idPrefix="settings" id="devices" value={tab}><ConnectedDevicesSettings /></TabPanel>
         </div>

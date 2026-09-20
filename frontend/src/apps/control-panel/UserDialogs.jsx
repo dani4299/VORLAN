@@ -90,7 +90,7 @@ export const ResetPasswordDialog = ({ user, onClose, onDone }) => {
   const { busy, error, submit } = useSubmit(() => resetUserPassword(user.id, password), () => onDone(user.username), "Couldn't change the password.");
 
   return (
-    <Modal title={`Reset password for ${user.username}`} description="They will need the new password the next time they sign in." onClose={onClose}>
+    <Modal title={`Reset password for ${user.username}`} description="Every device they are signed in on is signed out, and they will need the new password to get back in." onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
         <TextField
           label="New password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password"

@@ -13,6 +13,11 @@ export const deleteUser = (id) => api.delete(`/admin/users/${id}`, { headers: au
 export const listAllDevices = () => get('/admin/devices').then((d) => d.devices);
 export const removeDevice = (userId, deviceId) => api.delete(`/admin/devices/${userId}/${deviceId}`, { headers: authHeaders() });
 
+/** Every live sign-in across all accounts. */
+export const listSessions = () => get('/admin/sessions').then((d) => d.sessions);
+export const signUserOut = (id) => api.delete(`/admin/users/${id}/sessions`, { headers: authHeaders() }).then((r) => r.data.ended);
+export const signDeviceOut = (userId, deviceId) => api.delete(`/admin/devices/${userId}/${deviceId}/sessions`, { headers: authHeaders() }).then((r) => r.data.ended);
+
 export const listTasks = () => get('/admin/tasks').then((d) => d.tasks);
 
 /** { entries, hasMore }. `beforeId` continues from the last entry you have. */
@@ -26,6 +31,7 @@ export const getProcesses = (limit = 15) => get('/admin/system/processes', { lim
 export const getStorage = () => get('/admin/storage');
 export const getServices = () => get('/admin/system/services');
 export const getNetwork = () => get('/admin/system/network');
+export const getSecurity = () => get('/admin/system/security');
 export const getAbout = () => get('/admin/system/about');
 
 /** The diagnostics bundle as a downloadable file. Needs the auth header, so it can't be a plain link. */

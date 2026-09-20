@@ -6,14 +6,45 @@ import { DescriptionList } from '../../components/ui/DescriptionList';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { Spinner } from '../../components/ui/Spinner';
 import { useToast } from '../../context/ToastContext';
-import { downloadDiagnostics, errorMessage, getAbout } from '../../lib/adminApi';
+import { downloadDiagnostics, errorMessage, getAbout, getSecurity } from '../../lib/adminApi';
 import { formatDateTime } from '../../lib/format';
 import { usePolling } from '../../lib/usePolling';
+
+const daysUntil = (iso) => Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
+
+/** How connections and sign-ins are protected. Describes the secrets; the secrets themselves never leave the server. */
+const SecuritySection = ({ security }) => {
+  const { tls, jwtSecret, sessions, ports } = security;
+  const days = tls.validTo ? daysUntil(tls.validTo) : null;
+  return (
+    <Section
+      title="Security"
+      description={tls.enabled
+        ? 'Other devices reach VORLAN over HTTPS with a certificate this computer made for itself. Browsers warn about it once because no outside authority vouches for it: compare the fingerprint below with the one in the warning before accepting.'
+        : 'HTTPS is turned off, so passwords and files cross your network unencrypted. Turn it back on unless something else in front of VORLAN already provides it.'}
+    >
+      <DescriptionList
+        items={[
+          { label: 'HTTPS', value: tls.enabled ? `On, port ${ports.https}` : 'Off' },
+          ...(tls.enabled && tls.fingerprint256 ? [
+            { label: 'Certificate fingerprint', value: <span className="font-mono text-xs break-all">{tls.fingerprint256}</span> },
+            { label: 'Certificate expires', value: `${formatDateTime(tls.validTo)}${days != null ? ` (${days > 0 ? `in ${days} ${days === 1 ? 'day' : 'days'}` : 'expired'})` : ''}` },
+            { label: 'Certificate covers', value: [...(tls.names?.dns || []), ...(tls.names?.ips || [])].join(', ') },
+          ] : []),
+          { label: 'Sign-in key', value: jwtSecret.source === 'environment' ? 'Set by the JWT_SECRET setting' : `Stored in ${jwtSecret.location}` },
+          { label: 'Signed in now', value: `${sessions.active} ${sessions.active === 1 ? 'sign-in' : 'sign-ins'}` },
+          { label: 'Sign-in renewal', value: `Every ${sessions.accessTokenMinutes} minutes, quietly; a device unused for ${sessions.idleDays} days (or ${sessions.maxDays} days in total) must sign in again` },
+        ]}
+      />
+    </Section>
+  );
+};
 
 /** What this install is (version, where it keeps things) and a diagnostics file to send when something needs help. */
 export const Support = () => {
   const showToast = useToast();
   const { data, error, reload } = usePolling(getAbout, 60000);
+  const { data: security } = usePolling(getSecurity, 60000);
   const [downloading, setDownloading] = useState(false);
 
   const download = async () => {
@@ -48,6 +79,8 @@ export const Support = () => {
             ]}
           />
         </Section>
+
+        {security && <SecuritySection security={security} />}
 
         <Section title="Where things are kept">
           <DescriptionList
