@@ -4,13 +4,23 @@ const history = require('../services/history.service');
 
 const router = express.Router();
 
-router.get('/', verifyToken, (req, res) => {
-  res.json({ sessions: history.getSessions(req.user.username) });
+router.get('/', verifyToken, async (req, res) => {
+  try {
+    res.json({ sessions: await history.getSessions(req.user.id) });
+  } catch (err) {
+    console.error('Failed to load history:', err);
+    res.status(500).json({ error: 'Failed to load history.' });
+  }
 });
 
-router.post('/', verifyToken, (req, res) => {
-  history.setSessions(req.user.username, req.body.sessions);
-  res.json({ message: 'History synced.' });
+router.post('/', verifyToken, async (req, res) => {
+  try {
+    await history.setSessions(req.user.id, req.body.sessions);
+    res.json({ message: 'History synced.' });
+  } catch (err) {
+    console.error('Failed to save history:', err);
+    res.status(500).json({ error: 'Failed to save history.' });
+  }
 });
 
 module.exports = router;

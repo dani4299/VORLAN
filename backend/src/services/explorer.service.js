@@ -75,18 +75,31 @@ const renameEntry = (relPath, newName) => {
   fs.renameSync(full, target);
 };
 
-/** Recursive copy - fs.cpSync handles both files and directories in one call. */
-const copyEntry = (fromRelPath, toRelDir) => {
+/** Validates a copy request and works out where the copy will land. Synchronous and cheap on purpose, so a bad request is rejected up front (400/404) instead of becoming a failed background task. */
+const planCopy = (fromRelPath, toRelDir) => {
   const from = safeResolve(fromRelPath);
   const toDir = safeResolve(toRelDir);
+  if (!fs.existsSync(from)) {
+    const err = new Error('That item no longer exists.');
+    err.status = 404;
+    throw err;
+  }
+  if (toDir === from || toDir.startsWith(from + path.sep)) {
+    const err = new Error("Can't copy a folder into itself.");
+    err.status = 400;
+    throw err;
+  }
   let target = path.join(toDir, path.basename(from));
   if (target === from) {
     const ext = path.extname(target);
     const base = path.basename(target, ext);
     target = path.join(toDir, `${base} (copy)${ext}`);
   }
-  fs.cpSync(from, target, { recursive: true, errorOnExist: false, force: true });
+  return { from, target };
 };
+
+/** The slow part of a copy. Unlike the fs.cpSync it replaced, fs.promises.cp yields to the event loop while it works, so a large copy no longer freezes every other request. Handles files and directories alike. */
+const executeCopy = ({ from, target }) => fs.promises.cp(from, target, { recursive: true, errorOnExist: false, force: true });
 
 const moveEntry = (fromRelPath, toRelDir) => {
   const from = safeResolve(fromRelPath);
@@ -126,4 +139,4 @@ const recentFiles = (limit = 20) => {
   return files.slice(0, limit);
 };
 
-module.exports = { EXPLORER_DIR, ROOT_FOLDERS, safeResolve, listDir, createFolder, deleteEntry, renameEntry, copyEntry, moveEntry, search, recentFiles };
+module.exports = { EXPLORER_DIR, ROOT_FOLDERS, safeResolve, listDir, createFolder, deleteEntry, renameEntry, planCopy, executeCopy, moveEntry, search, recentFiles };

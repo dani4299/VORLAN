@@ -4,16 +4,23 @@ const fs = require('fs');
 const path = require('path');
 const verifyToken = require('../middleware/auth.middleware');
 const explorer = require('../services/explorer.service');
+const jobQueue = require('../services/jobQueue.service');
 
 const router = express.Router();
+
+/** Only errors the service layer raised on purpose carry a status and a message written for users. Anything else is a raw system error (ENOENT, EISDIR, ...) whose message includes absolute server file paths, so it's logged and replaced with a generic one. */
+const sendError = (res, err) => {
+  console.error('Explorer error:', err.message);
+  if (err.status) return res.status(err.status).json({ error: err.message });
+  res.status(500).json({ error: 'Something went wrong. Please try again.' });
+};
 
 /** Wraps a handler so a thrown { status, message } from the service layer becomes the right HTTP response. */
 const handle = (fn) => (req, res) => {
   try {
     fn(req, res);
   } catch (err) {
-    console.error('Explorer error:', err.message);
-    res.status(err.status || 500).json({ error: err.message || 'Something went wrong.' });
+    sendError(res, err);
   }
 };
 
@@ -86,11 +93,22 @@ router.patch('/item', verifyToken, handle((req, res) => {
   res.json({ message: 'Renamed.' });
 }));
 
-router.post('/copy', verifyToken, handle((req, res) => {
+// The copy runs on the job queue so it can't freeze the server, but the response still waits for
+// it to finish - the file manager refreshes the folder as soon as this returns.
+router.post('/copy', verifyToken, async (req, res) => {
   const { from, to } = req.body;
-  explorer.copyEntry(from, to || '');
-  res.json({ message: 'Copied.' });
-}));
+  try {
+    const plan = explorer.planCopy(from, to || '');
+    const job = jobQueue.enqueue('explorer.copy', () => explorer.executeCopy(plan), {
+      label: `Copy ${from} to ${to || 'Files'}`,
+      startedBy: req.user.username,
+    });
+    await job.done;
+    res.json({ message: 'Copied.' });
+  } catch (err) {
+    sendError(res, err);
+  }
+});
 
 router.post('/move', verifyToken, handle((req, res) => {
   const { from, to } = req.body;

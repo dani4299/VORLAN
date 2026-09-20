@@ -1,7 +1,4 @@
-const fs = require('fs');
-const { HISTORY_FILE } = require('../config/paths');
-
-let allHistory = fs.existsSync(HISTORY_FILE) ? JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8')) : {};
+const db = require('../db');
 
 const defaultSessions = () => [
   {
@@ -11,11 +8,20 @@ const defaultSessions = () => [
   },
 ];
 
-const getSessions = (username) => allHistory[username] || defaultSessions();
+const getSessions = (userId) => new Promise((resolve, reject) => {
+  db.get('SELECT sessions FROM ai_history WHERE user_id = ?', [userId], (err, row) => {
+    if (err) return reject(err);
+    resolve(row ? JSON.parse(row.sessions) : defaultSessions());
+  });
+});
 
-const setSessions = (username, sessions) => {
-  allHistory[username] = sessions;
-  fs.writeFileSync(HISTORY_FILE, JSON.stringify(allHistory));
-};
+const setSessions = (userId, sessions) => new Promise((resolve, reject) => {
+  db.run(
+    `INSERT INTO ai_history (user_id, sessions) VALUES (?, ?)
+     ON CONFLICT(user_id) DO UPDATE SET sessions = excluded.sessions`,
+    [userId, JSON.stringify(sessions)],
+    (err) => (err ? reject(err) : resolve())
+  );
+});
 
 module.exports = { getSessions, setSessions };

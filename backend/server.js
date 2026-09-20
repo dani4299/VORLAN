@@ -17,6 +17,12 @@ const storageRoutes = require('./src/routes/storage.routes');
 const systemRoutes = require('./src/routes/system.routes');
 const explorerRoutes = require('./src/routes/explorer.routes');
 const devicesRoutes = require('./src/routes/devices.routes');
+const adminRoutes = require('./src/routes/admin.routes');
+const requestEvents = require('./src/middleware/requestEvents.middleware');
+const listeners = require('./src/listeners');
+const metrics = require('./src/services/metrics.service');
+
+listeners.register();
 
 const app = express();
 
@@ -30,6 +36,7 @@ app.use('/media', express.static(GLOBAL_MEDIA_DIR));
 app.use('/media/personal', express.static(PERSONAL_VAULT_DIR));
 
 // API routes
+app.use('/api', requestEvents);
 app.use('/api/auth', authRoutes);
 app.use('/api/vault', vaultRoutes);
 app.use('/api/personal', personalRoutes);
@@ -41,6 +48,7 @@ app.use('/api/storage', storageRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/explorer', explorerRoutes);
 app.use('/api/devices', devicesRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Serves the frontend's production build when one exists (an installed copy of VORLAN) - a plain
 // dev checkout with no build present skips this entirely, so `npm start`'s Vite dev server
@@ -76,4 +84,6 @@ app.listen(PORT, '0.0.0.0', (err) => {
   console.log(`AI assistant: offline-first, via Ollama on port 11434`);
   console.log(`Storage: ${path.relative(process.cwd(), GLOBAL_MEDIA_DIR)}`);
   console.log('===================================================');
+
+  metrics.start().catch((e) => console.error('Metrics collection failed to start:', e.message));
 });

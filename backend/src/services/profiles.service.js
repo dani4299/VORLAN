@@ -1,25 +1,27 @@
-const fs = require('fs');
-const { PROFILES_FILE } = require('../config/paths');
+const db = require('../db');
 
-let profiles = fs.existsSync(PROFILES_FILE) ? JSON.parse(fs.readFileSync(PROFILES_FILE, 'utf8')) : {};
+const get = (username) => new Promise((resolve, reject) => {
+  db.get('SELECT data FROM profiles WHERE username = ?', [username], (err, row) => {
+    if (err) return reject(err);
+    resolve(row ? JSON.parse(row.data) : {});
+  });
+});
 
-/** Legacy entries stored the pfp string directly; normalize those to the {pfp, wallpaper} shape. */
-const get = (username) => {
-  const entry = profiles[username];
-  if (!entry) return {};
-  return typeof entry === 'string' ? { pfp: entry } : entry;
+const update = async (username, patch) => {
+  const merged = { ...(await get(username)), ...patch };
+  await new Promise((resolve, reject) => {
+    db.run(
+      `INSERT INTO profiles (username, data) VALUES (?, ?)
+       ON CONFLICT(username) DO UPDATE SET data = excluded.data`,
+      [username, JSON.stringify(merged)],
+      (err) => (err ? reject(err) : resolve())
+    );
+  });
+  return merged;
 };
 
-const update = (username, patch) => {
-  profiles[username] = { ...get(username), ...patch };
-  fs.writeFileSync(PROFILES_FILE, JSON.stringify(profiles));
-};
-
-const renameUser = (oldUsername, newUsername) => {
-  if (profiles[oldUsername] === undefined) return;
-  profiles[newUsername] = profiles[oldUsername];
-  delete profiles[oldUsername];
-  fs.writeFileSync(PROFILES_FILE, JSON.stringify(profiles));
-};
+const renameUser = (oldUsername, newUsername) => new Promise((resolve, reject) => {
+  db.run('UPDATE profiles SET username = ? WHERE username = ?', [newUsername, oldUsername], (err) => (err ? reject(err) : resolve()));
+});
 
 module.exports = { get, update, renameUser };

@@ -26,17 +26,27 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-router.get('/has-pin/:username', (req, res) => {
-  res.json({ hasPin: vaultPins.hasPin(req.params.username) });
+router.get('/has-pin/:username', async (req, res) => {
+  try {
+    res.json({ hasPin: await vaultPins.hasPin(req.params.username) });
+  } catch (err) {
+    console.error('Failed to check vault PIN:', err);
+    res.status(500).json({ error: 'Failed to check vault PIN.' });
+  }
 });
 
-router.post('/pin', (req, res) => {
+router.post('/pin', async (req, res) => {
   const { username, pin } = req.body;
-  const result = vaultPins.verifyOrSet(username, pin);
-  if (result.success) {
-    return res.json({ success: true });
+  try {
+    const result = await vaultPins.verifyOrSet(username, pin);
+    if (result.success) {
+      return res.json({ success: true });
+    }
+    res.status(401).json({ error: 'Incorrect PIN.' });
+  } catch (err) {
+    console.error('Failed to verify vault PIN:', err);
+    res.status(500).json({ error: 'Failed to verify vault PIN.' });
   }
-  res.status(401).json({ error: 'Incorrect PIN.' });
 });
 
 router.post('/upload', upload.single('mediaFile'), (req, res) => {

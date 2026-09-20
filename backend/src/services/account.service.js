@@ -16,11 +16,15 @@ const renamePersonalVaultFiles = (oldUsername, newUsername) => {
   }
 };
 
-/** The username doubles as a storage key across profiles, notes, vault pins, and personal vault filenames — a rename has to cascade through all of them or data silently orphans. */
-const renameUsernameEverywhere = (oldUsername, newUsername) => {
-  profiles.renameUser(oldUsername, newUsername);
-  notes.renameUser(oldUsername, newUsername);
-  vaultPins.renameUser(oldUsername, newUsername);
+/** The username doubles as a storage key across profiles, notes, vault pins, and personal vault
+ * filenames — a rename has to cascade through all of them or data silently orphans. (Devices are
+ * keyed by the user's stable id instead, precisely to avoid needing to be in this list.) */
+const renameUsernameEverywhere = async (oldUsername, newUsername) => {
+  await Promise.all([
+    profiles.renameUser(oldUsername, newUsername),
+    notes.renameUser(oldUsername, newUsername),
+    vaultPins.renameUser(oldUsername, newUsername),
+  ]);
   renamePersonalVaultFiles(oldUsername, newUsername);
 };
 

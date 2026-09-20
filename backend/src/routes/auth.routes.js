@@ -4,12 +4,16 @@ const jwt = require('jsonwebtoken');
 const db = require('../db');
 const verifyToken = require('../middleware/auth.middleware');
 const account = require('../services/account.service');
+const auditLog = require('../services/auditLog.service');
 const { JWT_SECRET, JWT_EXPIRY } = require('../config/constants');
 
 const router = express.Router();
 
 router.post('/signup', async (req, res) => {
-  const { username, password, email, fullName, role } = req.body;
+  // `role` is deliberately not accepted from the request body — a client used to be able to
+  // simply POST { role: 'admin' } and self-grant administrator, which is exactly what the
+  // frontend's signup form did, unconditionally, for every single signup.
+  const { username, password, email, fullName } = req.body;
 
   if (!username || !password || !email) {
     return res.status(400).json({ error: 'Please enter a username, email, and password.' });
@@ -17,11 +21,18 @@ router.post('/signup', async (req, res) => {
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const userRole = role || 'guest';
+
+    // The very first account on a fresh install becomes the administrator — the same bootstrap
+    // every real NAS setup wizard uses (Synology DSM, TrueNAS, ...). After that, signup can never
+    // grant admin on its own; an existing admin has to promote someone from System State.
+    const userCount = await new Promise((resolve, reject) => {
+      db.get('SELECT COUNT(*) AS count FROM users', (err, row) => (err ? reject(err) : resolve(row.count)));
+    });
+    const userRole = userCount === 0 ? 'admin' : 'guest';
 
     db.run(
-      'INSERT INTO users (username, password, role, email, full_name) VALUES (?, ?, ?, ?, ?)',
-      [username, hashedPassword, userRole, email, fullName || null],
+      'INSERT INTO users (username, password, role, email, full_name, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [username, hashedPassword, userRole, email, fullName || null, new Date().toISOString()],
       function (err) {
         if (err) {
           if (err.message.includes('UNIQUE constraint failed: users.username')) {
@@ -33,6 +44,8 @@ router.post('/signup', async (req, res) => {
           console.error('Database error:', err);
           return res.status(500).json({ error: 'Something went wrong creating your account.' });
         }
+
+        auditLog.log(username, 'account.created', userRole === 'admin' ? 'first account on this install — granted administrator' : `role: ${userRole}`);
 
         res.status(201).json({
           message: 'Account created.',
@@ -61,11 +74,13 @@ router.post('/login', async (req, res) => {
     }
 
     if (!user) {
+      auditLog.log(username, 'auth.login_failed', 'no such account');
       return res.status(401).json({ error: 'Incorrect username or password.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      auditLog.log(username, 'auth.login_failed', 'wrong password');
       return res.status(401).json({ error: 'Incorrect username or password.' });
     }
 
@@ -74,6 +89,8 @@ router.post('/login', async (req, res) => {
       JWT_SECRET,
       { expiresIn: JWT_EXPIRY }
     );
+
+    auditLog.log(user.username, 'auth.login_success');
 
     res.json({
       message: 'Signed in.',
@@ -128,7 +145,7 @@ router.patch('/account', verifyToken, (req, res) => {
       return applyFullName();
     }
 
-    db.run('UPDATE users SET username = ? WHERE id = ?', [newUsername, req.user.id], (renameErr) => {
+    db.run('UPDATE users SET username = ? WHERE id = ?', [newUsername, req.user.id], async (renameErr) => {
       if (renameErr) {
         if (renameErr.message.includes('UNIQUE constraint failed')) {
           return res.status(409).json({ error: 'That username is already taken.' });
@@ -138,10 +155,12 @@ router.patch('/account', verifyToken, (req, res) => {
       }
 
       try {
-        account.renameUsernameEverywhere(oldUsername, newUsername);
+        await account.renameUsernameEverywhere(oldUsername, newUsername);
       } catch (cascadeErr) {
         console.error('Username rename cascade error:', cascadeErr);
       }
+
+      auditLog.log(newUsername, 'account.renamed', `${oldUsername} -> ${newUsername}`);
 
       applyFullName();
     });
