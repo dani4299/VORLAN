@@ -38,6 +38,7 @@ pull`) rather than re-cloning.
 
 - VORLAN itself: `~/.local/share/VORLAN`
 - Application menu entry: `~/.local/share/applications/vorlan.desktop`
+- Sign-in key and HTTPS certificate (generated on first start, private to your user): `~/.local/share/VORLAN/backend/secrets`
 - Hotspot config: `/etc/create_ap.conf`
 - Install log: `~/.local/share/VORLAN/install.log`
 
@@ -50,6 +51,18 @@ it:
 ```bash
 VORLAN_DRY_RUN=1 bash lib/install-system-deps.sh "VORLAN-test" "somepassword"
 ```
+
+## HTTPS
+
+VORLAN serves itself over HTTPS on port `5443` with a certificate it creates for
+itself on first start. Opening VORLAN from the application menu keeps using
+`http://localhost:5000` on the same computer (no warning); the phone or tablet
+connecting through the hotspot uses `https://<this computer's address>:5443`
+and sees a one-time browser warning about the certificate - the QR code in
+the app already points at the right address. Compare the fingerprint the
+warning shows with the one in **Support ▸ Security** before accepting. Delete
+`backend/secrets` to start over with a new certificate and sign-in key (everyone
+signs in again).
 
 ## Known limitations
 
