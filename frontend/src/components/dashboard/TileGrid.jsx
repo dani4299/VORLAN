@@ -1,5 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BatteryCharging, BatteryFull, BatteryMedium, BatteryLow, Plug, Wifi, WifiOff,
@@ -8,7 +7,11 @@ import {
 import { TILES_BY_ID, mergeDashboardLayout } from '../../lib/dashboardTiles';
 import { useProfile } from '../../context/ProfileContext';
 import { useSystemStats } from '../../lib/useSystemStats';
-import { formatBytes } from '../../lib/format';
+import { formatBytes, formatUptime } from '../../lib/format';
+import { isAdmin as checkIsAdmin } from '../../lib/api';
+import { Button } from '../ui/Button';
+import { Meter } from '../ui/Meter';
+import { Modal } from '../ui/Modal';
 
 const SIZE_SPAN = {
   S: 'col-span-1 row-span-1',
@@ -16,19 +19,11 @@ const SIZE_SPAN = {
   L: 'col-span-2 row-span-2',
 };
 const SPAN_COUNT = { S: { cols: 1, rows: 1 }, M: { cols: 2, rows: 1 }, L: { cols: 2, rows: 2 } };
-const ROW_PX = 108;
+const SIZE_LABEL = { S: 'small', M: 'wide', L: 'large' };
+const NEXT_SIZE = { S: 'M', M: 'L', L: 'S' };
+const ROW_PX = 96;
 
 const spanToSize = ({ cols, rows }) => (cols === 1 ? 'S' : rows === 2 ? 'L' : 'M');
-
-const formatUptime = (seconds) => {
-  if (seconds == null) return null;
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-};
 
 const batteryVisual = (battery) => {
   if (!battery || !battery.hasBattery) return { icon: Plug, text: 'Plugged in' };
@@ -38,33 +33,25 @@ const batteryVisual = (battery) => {
   return { icon: BatteryFull, text: `${battery.percent}% · On battery` };
 };
 
-const StatHeader = ({ icon: Icon, label, color }) => (
-  <div className="flex items-center gap-2.5">
-    <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 chip">
-      <Icon size={15} style={{ color }} />
-    </div>
-    <span className="text-sm font-medium text-[var(--ink)]">{label}</span>
+const WidgetHeader = ({ icon: Icon, label }) => (
+  <div className="flex items-center gap-2 text-sm font-medium text-[var(--ink)]">
+    <Icon size={16} aria-hidden="true" className="text-[var(--ink-muted)]" />
+    {label}
   </div>
 );
 
-const UsageBar = ({ percent, color, caption }) => (
-  <>
-    <p className="text-xs text-[var(--ink-muted)]">{caption}</p>
-    <div className="h-1.5 rounded-full bg-[var(--overlay-4)] overflow-hidden">
-      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${percent}%`, background: color }} />
-    </div>
-  </>
-);
+const Unavailable = () => <p className="text-xs text-[var(--ink-muted)]">Not available</p>;
 
-const StatTileContent = ({ tile, stats }) => {
+/** What a widget shows. Usage bars go warm as a resource fills up; battery and load are plain readings. */
+const WidgetContent = ({ tile, stats }) => {
   if (tile.id === 'power') {
     const battery = stats?.battery;
-    const visual = battery ? batteryVisual(battery) : { icon: BatteryCharging, text: null };
+    const visual = battery ? batteryVisual(battery) : null;
     return (
       <>
-        <StatHeader icon={visual.icon} label="Power" color={tile.color} />
-        {visual.text ? <p className="text-xs text-[var(--ink-muted)]">{visual.text}</p> : <p className="text-xs text-[var(--ink-faint)]">Unavailable</p>}
-        {battery?.hasBattery && <UsageBar percent={battery.percent} color={tile.color} caption="" />}
+        <WidgetHeader icon={visual?.icon || tile.icon} label="Power" />
+        {visual ? <p className="text-xs text-[var(--ink-muted)]">{visual.text}</p> : <Unavailable />}
+        {battery?.hasBattery && <Meter value={battery.percent} label="Battery" valueText={`${battery.percent}%`} tone="accent" />}
       </>
     );
   }
@@ -73,57 +60,60 @@ const StatTileContent = ({ tile, stats }) => {
     const cpu = stats?.cpu;
     return (
       <>
-        <StatHeader icon={tile.icon} label="CPU" color={tile.color} />
-        {cpu ? <UsageBar percent={cpu.percent} color={tile.color} caption={`${cpu.percent}% load`} /> : <p className="text-xs text-[var(--ink-faint)]">Unavailable</p>}
+        <WidgetHeader icon={tile.icon} label="CPU" />
+        {cpu ? (
+          <>
+            <p className="text-xs text-[var(--ink-muted)]">{cpu.percent}% load</p>
+            <Meter value={cpu.percent} label="CPU load" valueText={`${cpu.percent}%`} />
+          </>
+        ) : <Unavailable />}
       </>
     );
   }
 
   if (tile.id === 'network') {
     const net = stats?.network;
-    const Icon = net?.connected ? Wifi : WifiOff;
     return (
       <>
-        <StatHeader icon={Icon} label="Network" color={tile.color} />
-        {net ? (
-          <p className="text-xs text-[var(--ink-muted)]">{net.connected ? (net.ip || 'Connected') : 'Disconnected'}</p>
-        ) : (
-          <p className="text-xs text-[var(--ink-faint)]">Unavailable</p>
-        )}
+        <WidgetHeader icon={net?.connected ? Wifi : WifiOff} label="Network" />
+        {net ? <p className="text-xs text-[var(--ink-muted)]">{net.connected ? (net.ip || 'Connected') : 'Disconnected'}</p> : <Unavailable />}
       </>
     );
   }
 
   if (tile.id === 'uptime') {
-    const uptime = formatUptime(stats?.uptimeSeconds);
+    const seconds = stats?.uptimeSeconds;
     return (
       <>
-        <StatHeader icon={tile.icon} label="Uptime" color={tile.color} />
-        {uptime ? <p className="text-xs text-[var(--ink-muted)]">{uptime} since boot</p> : <p className="text-xs text-[var(--ink-faint)]">Unavailable</p>}
+        <WidgetHeader icon={tile.icon} label="Uptime" />
+        {seconds != null ? <p className="text-xs text-[var(--ink-muted)]">{formatUptime(seconds)} since boot</p> : <Unavailable />}
       </>
     );
   }
 
   const data = stats?.[tile.id === 'storage' ? 'disk' : 'ram'];
-  const percent = data ? Math.min(100, Math.round((data.usedBytes / data.totalBytes) * 100)) : null;
+  const text = data ? `${formatBytes(data.usedBytes)} of ${formatBytes(data.totalBytes)}` : null;
   return (
     <>
-      <StatHeader icon={tile.icon} label={tile.label} color={tile.color} />
-      {data ? <UsageBar percent={percent} color={tile.color} caption={`${formatBytes(data.usedBytes)} of ${formatBytes(data.totalBytes)}`} /> : <p className="text-xs text-[var(--ink-faint)]">Unavailable</p>}
+      <WidgetHeader icon={tile.icon} label={tile.label} />
+      {data ? (
+        <>
+          <p className="text-xs text-[var(--ink-muted)]">{text}</p>
+          <Meter value={data.usedBytes} max={data.totalBytes} label={`${tile.label} in use`} valueText={text} />
+        </>
+      ) : <Unavailable />}
     </>
   );
 };
 
+const EDIT_BUTTON = 'absolute w-7 h-7 rounded-[var(--radius-md)] flex items-center justify-center bg-[var(--canvas-elevated)] border border-[var(--surface-border-strong)] text-[var(--ink)] hover:bg-[var(--overlay-3)] z-10';
+
 const Tile = ({
-  tile, size, editMode, dragging, onDragStart, onDragOver, onDrop, onDragEnd,
+  tile, size, editMode, dragging, onDragStart, onDrop, onDragEnd, onMove,
   onRemove, onResizePreview, onResizeCommit, gridRef, stats, navigate,
 }) => {
   const resizeState = useRef(null);
-
-  const handleClick = () => {
-    if (editMode) return;
-    if (tile.kind === 'nav') navigate(tile.path);
-  };
+  const dragged = useRef(false);
 
   const startResize = (e) => {
     e.preventDefault();
@@ -131,6 +121,7 @@ const Tile = ({
     const gridEl = gridRef.current;
     if (!gridEl) return;
     e.currentTarget.setPointerCapture(e.pointerId);
+    dragged.current = false;
 
     const gridRect = gridEl.getBoundingClientRect();
     const gridStyles = getComputedStyle(gridEl);
@@ -161,6 +152,7 @@ const Tile = ({
     const nextSize = spanToSize({ cols, rows });
     if (nextSize !== rs.lastSize) {
       rs.lastSize = nextSize;
+      dragged.current = true;
       onResizePreview(tile.id, nextSize);
     }
   };
@@ -171,141 +163,116 @@ const Tile = ({
     resizeState.current = null;
   };
 
-  const coreCardStyle = tile.core ? {
-    background: `color-mix(in srgb, ${tile.color} 16%, var(--canvas-elevated))`,
-    borderColor: `color-mix(in srgb, ${tile.color} 32%, transparent)`,
-  } : undefined;
-  const coreBadgeStyle = tile.core ? { background: `color-mix(in srgb, ${tile.color} 28%, transparent)` } : undefined;
+  // A plain click (or Enter/Space) steps through the sizes, so resizing doesn't need a mouse drag.
+  const cycleSize = () => {
+    if (dragged.current) { dragged.current = false; return; }
+    onResizeCommit(tile.id, NEXT_SIZE[size]);
+  };
+
+  const onGripKeyDown = (e) => {
+    const delta = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : 0;
+    if (!delta) return;
+    e.preventDefault();
+    onMove(tile.id, delta);
+  };
 
   return (
     <div
       draggable={editMode && !tile.core}
       onDragStart={() => onDragStart(tile.id)}
-      onDragOver={(e) => { e.preventDefault(); onDragOver(tile.id); }}
+      onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => { e.preventDefault(); onDrop(tile.id); }}
       onDragEnd={onDragEnd}
-      className={`relative ${SIZE_SPAN[size]} ${editMode && !tile.core ? 'animate-tile-wiggle' : ''} ${dragging ? 'opacity-40' : ''}`}
+      className={`relative ${SIZE_SPAN[size]} ${dragging ? 'opacity-40' : ''}`}
     >
       {tile.kind === 'nav' ? (
         <button
-          onClick={handleClick}
-          style={coreCardStyle}
-          className={`${tile.core ? 'border' : 'glass'} w-full h-full rounded-[28px] flex flex-col items-center justify-center gap-3 transition-all duration-150 ${editMode ? '' : 'hover:brightness-110 active:scale-[0.96]'}`}
+          type="button"
+          onClick={() => { if (!editMode) navigate(tile.path); }}
+          className="surface w-full h-full rounded-[var(--radius-lg)] flex flex-col items-center justify-center gap-2 text-[var(--ink)] transition-colors hover:border-[var(--ink-faint)]"
         >
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${tile.core ? '' : 'chip'}`} style={coreBadgeStyle}>
-            <tile.icon size={22} strokeWidth={2.25} style={{ color: tile.color }} />
-          </div>
-          <span className="text-sm font-medium text-[var(--ink)]">{tile.label}</span>
+          <tile.icon size={22} aria-hidden="true" className="text-[var(--ink-muted)]" />
+          <span className="text-sm font-medium">{tile.label}</span>
         </button>
       ) : (
-        <div className="glass w-full h-full rounded-[28px] p-4 flex flex-col gap-2 justify-center overflow-hidden">
-          <StatTileContent tile={tile} stats={stats} />
+        // While arranging, the move and resize handles sit in the corners, so a widget's content is kept clear of them.
+        <div className={`surface w-full h-full rounded-[var(--radius-lg)] p-4 flex flex-col gap-2 justify-center overflow-hidden ${editMode && !tile.core ? 'px-10' : ''}`}>
+          <WidgetContent tile={tile} stats={stats} />
         </div>
       )}
 
-      {editMode && (
+      {/* The controls sit inside the tile's own box so no ancestor's overflow can clip them. */}
+      {editMode && !tile.core && (
         <>
-          {/*
-            Badges sit INSIDE each tile's own box (not offset outside it) so they can never be
-            clipped by an ancestor's overflow-hidden - the grid's height varies with tile count,
-            so there's no guaranteed headroom for anything poking past the tile's own bounds.
-          */}
-          {!tile.core && (
-            <>
-              <button
-                onClick={() => onRemove(tile.id)}
-                title="Remove tile"
-                draggable={false}
-                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-[var(--hue-rose)] text-white flex items-center justify-center shadow-lg z-10"
-              >
-                <X size={13} strokeWidth={3} />
-              </button>
-              <div className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full bg-[var(--canvas-elevated)] border border-[var(--surface-border-strong)] text-[var(--ink-muted)] flex items-center justify-center shadow-lg cursor-grab z-10">
-                <GripVertical size={13} />
-              </div>
-              <button
-                title="Resize tile"
-                draggable={false}
-                onPointerDown={startResize}
-                onPointerMove={moveResize}
-                onPointerUp={endResize}
-                className="absolute bottom-1.5 right-1.5 w-6 h-6 rounded-full bg-[var(--canvas-elevated)] border border-[var(--surface-border-strong)] text-[var(--ink)] flex items-center justify-center shadow-lg z-10 cursor-nwse-resize touch-none"
-              >
-                <Maximize2 size={11} />
-              </button>
-            </>
-          )}
+          <button type="button" onClick={() => onRemove(tile.id)} aria-label={`Remove ${tile.label}`} title={`Remove ${tile.label}`} draggable={false} className={`${EDIT_BUTTON} top-1.5 right-1.5`}>
+            <X size={14} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            aria-label={`Move ${tile.label}. Use the arrow keys, or drag.`}
+            title="Move"
+            draggable={false}
+            onKeyDown={onGripKeyDown}
+            className={`${EDIT_BUTTON} top-1.5 left-1.5 cursor-grab`}
+          >
+            <GripVertical size={14} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            aria-label={`Resize ${tile.label}, currently ${SIZE_LABEL[size]}. Press to change, or drag.`}
+            title="Resize"
+            draggable={false}
+            onPointerDown={startResize}
+            onPointerMove={moveResize}
+            onPointerUp={endResize}
+            onClick={cycleSize}
+            className={`${EDIT_BUTTON} bottom-1.5 right-1.5 cursor-nwse-resize touch-none`}
+          >
+            <Maximize2 size={12} aria-hidden="true" />
+          </button>
         </>
       )}
     </div>
   );
 };
 
-/** iOS-style widget gallery: slides up from the bottom, lists every tile not currently on the dashboard. */
-const AddTileSheet = ({ available, onAdd, onClose }) => createPortal(
-  <div className="fixed inset-0 z-[200]">
-    <div className="absolute inset-0 scrim animate-toast-in" onClick={onClose} />
-    <div className="glass-strong absolute bottom-0 left-0 right-0 rounded-t-[32px] p-6 pb-8 max-h-[70vh] overflow-y-auto animate-sheet-up">
-      <div className="w-10 h-1.5 rounded-full bg-[var(--overlay-5)] mx-auto mb-5" />
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="text-lg font-semibold text-[var(--ink)]">Add a tile</h3>
-        <button onClick={onClose} className="text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors">
-          <X size={18} />
-        </button>
-      </div>
-      {available.length === 0 ? (
-        <p className="text-sm text-[var(--ink-muted)] text-center py-10">Every tile is already on your dashboard.</p>
-      ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-          {available.map((id) => {
-            const tile = TILES_BY_ID[id];
-            return (
+/** Lists every tile not currently on the home page, so the ones that are off by default (the widgets) can be added. */
+const AddTileDialog = ({ available, onAdd, onClose }) => (
+  <Modal title="Add a tile" description={available.length ? 'Choose a widget or app to add to your home page.' : undefined} onClose={onClose}>
+    {available.length === 0 ? (
+      <p className="text-sm text-[var(--ink-muted)]">Every tile is already on your home page.</p>
+    ) : (
+      <ul className="grid grid-cols-2 gap-2">
+        {available.map((id) => {
+          const tile = TILES_BY_ID[id];
+          return (
+            <li key={id}>
               <button
-                key={id}
+                type="button"
                 onClick={() => onAdd(id)}
-                className="glass rounded-2xl p-4 flex flex-col items-center gap-2 hover:brightness-125 active:scale-95 transition-all duration-150"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] border border-[var(--surface-border-strong)] text-sm font-medium text-[var(--ink)] hover:bg-[var(--overlay-2)] transition-colors"
               >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center chip">
-                  <tile.icon size={18} style={{ color: tile.color }} />
-                </div>
-                <span className="text-xs font-medium text-[var(--ink)] text-center">{tile.label}</span>
+                <tile.icon size={18} aria-hidden="true" className="text-[var(--ink-muted)]" />
+                {tile.label}
               </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  </div>,
-  document.body,
+            </li>
+          );
+        })}
+      </ul>
+    )}
+  </Modal>
 );
 
-export const TileGrid = ({ editMode, onRowsChange }) => {
+export const TileGrid = ({ editMode }) => {
   const navigate = useNavigate();
   const stats = useSystemStats();
   const { dashboardLayout, setDashboardLayout } = useProfile();
   const [draggedId, setDraggedId] = useState(null);
-  const [addSheetOpen, setAddSheetOpen] = useState(false);
-  const [dragPreview, setDragPreview] = useState(null); // { id, size }
+  const [addOpen, setAddOpen] = useState(false);
+  const [resizePreview, setResizePreview] = useState(null); // { id, size }
   const gridRef = useRef(null);
 
-  const layout = useMemo(() => mergeDashboardLayout(dashboardLayout), [dashboardLayout]);
-
-  // Measure actual rendered row count (via scrollHeight, which reflects the grid's own content
-  // height even when an ancestor clips it) so the page can shrink other elements to make room
-  // rather than losing rows off the bottom.
-  useEffect(() => {
-    const gridEl = gridRef.current;
-    if (!gridEl || !onRowsChange) return;
-    const gap = parseFloat(getComputedStyle(gridEl).rowGap) || 0;
-    const measure = () => {
-      const rows = Math.max(1, Math.round((gridEl.scrollHeight + gap) / (ROW_PX + gap)));
-      onRowsChange(rows);
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(gridEl);
-    return () => observer.disconnect();
-  }, [layout.order, layout.sizes, onRowsChange]);
+  const layout = useMemo(() => mergeDashboardLayout(dashboardLayout, checkIsAdmin()), [dashboardLayout]);
 
   const removeTile = (id) => {
     setDashboardLayout((prev) => ({
@@ -315,23 +282,21 @@ export const TileGrid = ({ editMode, onRowsChange }) => {
     }));
   };
 
-  const restoreTile = (id) => {
+  const addTile = (id) => {
     setDashboardLayout((prev) => ({
       ...prev,
       order: [...prev.order, id],
       dismissed: (prev.dismissed || []).filter((tid) => tid !== id),
     }));
-    setAddSheetOpen(false);
+    setAddOpen(false);
   };
 
   const commitResize = (id, size) => {
-    setDragPreview(null);
+    setResizePreview(null);
     setDashboardLayout((prev) => ({ ...prev, sizes: { ...prev.sizes, [id]: size } }));
   };
 
-  const handleDrop = (targetId) => {
-    if (!draggedId || draggedId === targetId) { setDraggedId(null); return; }
-    const movedId = draggedId;
+  const moveTo = (movedId, targetId) => {
     setDashboardLayout((prev) => {
       const order = [...prev.order];
       const from = order.indexOf(movedId);
@@ -341,36 +306,44 @@ export const TileGrid = ({ editMode, onRowsChange }) => {
       order.splice(to, 0, movedId);
       return { ...prev, order };
     });
+  };
+
+  const handleDrop = (targetId) => {
+    if (draggedId && draggedId !== targetId) moveTo(draggedId, targetId);
     setDraggedId(null);
   };
 
+  // Keyboard reorder: swap with the neighbour, but never into the pinned core tiles at the front.
+  const moveBy = (id, delta) => {
+    const index = layout.order.indexOf(id);
+    const target = layout.order[index + delta];
+    if (target && !TILES_BY_ID[target].core) moveTo(id, target);
+  };
+
   return (
-    <div className="w-full max-w-3xl">
+    <div className="w-full">
       {editMode && (
         <div className="flex justify-end mb-3">
-          <button
-            onClick={() => setAddSheetOpen(true)}
-            className="glass px-4 py-2 rounded-full flex items-center gap-2 text-sm font-medium text-[var(--ink)] hover:brightness-125 active:scale-[0.97] transition-all duration-150"
-          >
-            <Plus size={16} /> Add tile
-          </button>
+          <Button variant="secondary" onClick={() => setAddOpen(true)} className="bg-[var(--canvas-elevated)]">
+            <Plus size={16} aria-hidden="true" />Add a tile
+          </Button>
         </div>
       )}
 
-      <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-5 gap-3 md:gap-4" style={{ gridAutoFlow: 'dense', gridAutoRows: `${ROW_PX}px` }}>
+      <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3" style={{ gridAutoFlow: 'dense', gridAutoRows: `${ROW_PX}px` }}>
         {layout.order.map((id) => (
           <Tile
             key={id}
             tile={TILES_BY_ID[id]}
-            size={dragPreview?.id === id ? dragPreview.size : (layout.sizes[id] || 'S')}
+            size={resizePreview?.id === id ? resizePreview.size : (layout.sizes[id] || 'S')}
             editMode={editMode}
             dragging={draggedId === id}
             onDragStart={setDraggedId}
-            onDragOver={() => {}}
             onDrop={handleDrop}
             onDragEnd={() => setDraggedId(null)}
+            onMove={moveBy}
             onRemove={removeTile}
-            onResizePreview={(tid, size) => setDragPreview({ id: tid, size })}
+            onResizePreview={(tid, size) => setResizePreview({ id: tid, size })}
             onResizeCommit={commitResize}
             gridRef={gridRef}
             stats={stats}
@@ -379,9 +352,7 @@ export const TileGrid = ({ editMode, onRowsChange }) => {
         ))}
       </div>
 
-      {addSheetOpen && (
-        <AddTileSheet available={layout.available} onAdd={restoreTile} onClose={() => setAddSheetOpen(false)} />
-      )}
+      {addOpen && <AddTileDialog available={layout.available} onAdd={addTile} onClose={() => setAddOpen(false)} />}
     </div>
   );
 };

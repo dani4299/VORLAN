@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Plus, Send, Menu, X, Trash2 } from 'lucide-react';
+import { MessageSquare, Plus, Send, Trash2 } from 'lucide-react';
 import api, { API_BASE, authHeaders } from '../../lib/api';
-import { IconButton, Button } from '../../components/ui/Button';
-import { BackButton } from '../../components/ui/BackButton';
+import { Button, IconButton } from '../../components/ui/Button';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { SelectField } from '../../components/ui/Field';
+import { Spinner } from '../../components/ui/Spinner';
+import { useElementWidth } from '../../lib/useElementWidth';
 
 const welcomeMessage = "Hi, I'm your VORLAN assistant. How can I help you today?";
+const WIDE_FROM = 720; // px of page (or window) width at which the conversation list becomes a side column
 
 const makeSession = () => ({
   id: Date.now(),
@@ -18,14 +22,22 @@ const updateMessageAt = (sessions, sessionId, index, patch) => sessions.map((s) 
   return { ...s, messages: s.messages.map((m, i) => (i === index ? { ...m, ...patch } : m)) };
 });
 
+const Avatar = () => (
+  <span className="w-7 h-7 rounded-full bg-white border border-[var(--surface-border)] flex items-center justify-center flex-shrink-0 overflow-hidden">
+    <img src="/logo.jpeg" alt="" className="w-full h-full object-contain p-[3px]" />
+  </span>
+);
+
 export const AssistantPage = () => {
   const [sessions, setSessions] = useState([makeSession()]);
   const [currentSessionId, setCurrentSessionId] = useState(sessions[0].id);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [root, setRoot] = useState(null);
   const scrollRef = useRef(null);
+  const wide = useElementWidth(root) >= WIDE_FROM;
 
   const currentSession = sessions.find((s) => s.id === currentSessionId) || sessions[0];
   const messages = currentSession?.messages || [];
@@ -55,19 +67,20 @@ export const AssistantPage = () => {
     }
   }, [sessions, loadingHistory, isTyping]);
 
+  // Keep the newest message in view as the conversation grows or the reply streams in.
+  const messageCount = messages.length;
+  const lastLength = messages[messageCount - 1]?.content?.length ?? 0;
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, isTyping]);
+  }, [messageCount, lastLength, isTyping]);
 
   const handleNewChat = () => {
     const newSession = makeSession();
     setSessions([newSession, ...sessions]);
     setCurrentSessionId(newSession.id);
-    setSidebarOpen(false);
   };
 
-  const handleDeleteChat = (id, e) => {
-    e.stopPropagation();
+  const handleDeleteChat = (id) => {
     const updated = sessions.filter((s) => s.id !== id);
     if (updated.length === 0) {
       const newSession = makeSession();
@@ -77,6 +90,7 @@ export const AssistantPage = () => {
       setSessions(updated);
       if (currentSessionId === id) setCurrentSessionId(updated[0].id);
     }
+    setPendingDelete(null);
   };
 
   /** Asks the model to summarize the exchange into a short title, once there's enough to summarize. */
@@ -89,12 +103,13 @@ export const AssistantPage = () => {
       if (res.data.title) {
         setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, title: res.data.title } : s)));
       }
-    } catch (err) {
+    } catch {
       // Non-critical - the placeholder title stays if this fails.
     }
   };
 
-  const handleSend = async () => {
+  const handleSend = async (e) => {
+    e?.preventDefault();
     if (!input.trim() || isTyping) return;
     const userMessage = input;
     const sessionId = currentSessionId;
@@ -129,7 +144,7 @@ export const AssistantPage = () => {
         setSessions((prev) => updateMessageAt(prev, sessionId, assistantIndex, { content: fullReply }));
       }
       setSessions((prev) => updateMessageAt(prev, sessionId, assistantIndex, { streaming: false }));
-    } catch (err) {
+    } catch {
       fullReply = '';
       setSessions((prev) => updateMessageAt(prev, sessionId, assistantIndex, {
         content: "I couldn't reach the assistant. Please check your connection and try again.",
@@ -143,124 +158,118 @@ export const AssistantPage = () => {
     if (isFirstExchange) generateTitle(sessionId, priorMessages, userMessage, fullReply);
   };
 
-  return (
-    <div className="flex h-full w-full relative overflow-hidden">
-      {/* Sidebar: persistent on desktop, an overlay drawer on mobile - conversation history lives here, Claude/ChatGPT-style. */}
-      <div className={`fixed md:relative inset-y-0 left-0 z-40 w-72 flex-shrink-0 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <div className="glass-strong md:glass flex flex-col h-full md:!rounded-none md:!border-0 md:!border-r md:!border-[var(--surface-border)] md:!shadow-none">
-          <div className="p-4 flex items-center gap-2 border-b border-[var(--surface-border)]">
-            <BackButton />
-            <span className="font-semibold text-[var(--ink)] flex-1">Assistant</span>
-            <IconButton onClick={() => setSidebarOpen(false)} className="md:hidden w-8 h-8"><X size={16} /></IconButton>
-          </div>
+  const waitingForFirstWord = isTyping && messages[messages.length - 1]?.content === '';
 
-          <div className="p-3">
-            <Button variant="secondary" size="md" onClick={handleNewChat} className="w-full">
-              <Plus size={15} /> New chat
-            </Button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-3 pt-0 space-y-1">
-            {sessions.map((s) => (
-              <div
-                key={s.id}
-                onClick={() => { setCurrentSessionId(s.id); setSidebarOpen(false); }}
-                className="group flex items-center justify-between p-3 rounded-2xl cursor-pointer transition-all"
-                style={{ background: currentSessionId === s.id ? 'var(--overlay-3)' : 'transparent' }}
-              >
-                <div className="flex items-center gap-3 truncate">
-                  <MessageSquare size={15} className="flex-shrink-0" style={{ color: currentSessionId === s.id ? 'var(--accent)' : 'var(--ink-faint)' }} />
-                  <span className="text-sm truncate font-medium" style={{ color: currentSessionId === s.id ? 'var(--ink)' : 'var(--ink-muted)' }}>{s.title}</span>
-                </div>
-                <button onClick={(e) => handleDeleteChat(s.id, e)} className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-opacity hover:bg-[var(--overlay-3)]" style={{ color: 'var(--hue-rose)' }}>
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
+  const conversations = wide ? (
+    <nav aria-label="Conversations" className="w-64 flex-shrink-0 flex flex-col border-r border-[var(--surface-border)] bg-[var(--canvas-elevated)]">
+      <div className="p-3">
+        <Button variant="secondary" onClick={handleNewChat} className="w-full"><Plus size={16} aria-hidden="true" />New chat</Button>
       </div>
+      <ul className="flex-1 overflow-y-auto p-3 pt-0 space-y-0.5">
+        {sessions.map((s) => {
+          const active = currentSessionId === s.id;
+          return (
+            <li key={s.id} className={`group flex items-center rounded-[var(--radius-md)] ${active ? 'bg-[var(--overlay-3)]' : 'hover:bg-[var(--overlay-2)]'}`}>
+              <button
+                type="button"
+                onClick={() => setCurrentSessionId(s.id)}
+                aria-current={active ? 'true' : undefined}
+                className={`flex-1 min-w-0 flex items-center gap-2.5 px-3 py-2 text-left text-sm ${active ? 'text-[var(--ink)] font-medium' : 'text-[var(--ink-muted)]'}`}
+              >
+                <MessageSquare size={15} aria-hidden="true" className="flex-shrink-0" />
+                <span className="truncate">{s.title}</span>
+              </button>
+              <IconButton label={`Delete conversation ${s.title}`} onClick={() => setPendingDelete(s)} className="w-8! h-8! mr-1 opacity-0 group-hover:opacity-100 focus:opacity-100">
+                <Trash2 size={14} aria-hidden="true" />
+              </IconButton>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  ) : (
+    <div className="flex items-end gap-2 px-4 py-3 border-b border-[var(--surface-border)] flex-shrink-0">
+      <div className="flex-1 min-w-0">
+        <SelectField label="Conversation" value={currentSessionId} onChange={(e) => setCurrentSessionId(Number(e.target.value))}>
+          {sessions.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
+        </SelectField>
+      </div>
+      <Button variant="secondary" onClick={handleNewChat}><Plus size={16} aria-hidden="true" />New chat</Button>
+    </div>
+  );
 
-      {sidebarOpen && (
-        <div className="md:hidden fixed inset-0 scrim z-30" onClick={() => setSidebarOpen(false)} />
-      )}
+  return (
+    <div ref={setRoot} className={`flex h-full w-full overflow-hidden ${wide ? 'flex-row' : 'flex-col'}`}>
+      {conversations}
 
-      <div className="flex-1 flex flex-col relative h-full min-w-0">
-        <div className="flex items-center justify-between px-4 md:px-10 py-4 md:py-6 flex-shrink-0">
-          <IconButton onClick={() => setSidebarOpen(true)} className="md:hidden">
-            <Menu size={18} />
-          </IconButton>
-          <h1 className="text-sm font-medium text-[var(--ink-muted)] hidden md:block">{currentSession?.title}</h1>
-          <div className="w-10 md:hidden" />
-        </div>
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
+        <h1 className="px-4 md:px-8 py-3 text-sm font-medium text-[var(--ink-muted)] border-b border-[var(--surface-border)] flex-shrink-0 truncate">{currentSession?.title}</h1>
 
-        <div className="flex-1 overflow-y-auto px-4 md:px-10" ref={scrollRef}>
-          <div className="max-w-3xl mx-auto space-y-6 pb-40">
+        <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6" ref={scrollRef}>
+          <div role="log" aria-live="polite" aria-label="Conversation" className="max-w-3xl mx-auto space-y-5">
             {messages.map((msg, i) => {
               // Pending placeholder for a not-yet-started reply - rendering it here too would
-              // double up with the "typing" indicator below, which represents this exact state.
+              // double up with the "thinking" indicator below, which represents this exact state.
               if (msg.streaming && msg.content === '' && i === messages.length - 1) return null;
-              return (
-              <div key={i} className={`animate-message-in flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role === 'system' && (
-                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden shadow-md">
-                    <img src="/logo.jpeg" alt="Assistant" className="w-full h-full object-contain p-[3px]" />
+              return msg.role === 'user' ? (
+                <div key={i} className="animate-message-in flex justify-end">
+                  <div className="max-w-[85%] md:max-w-[70%] rounded-[var(--radius-lg)] px-4 py-2.5 text-sm md:text-base bg-[var(--accent-solid)] text-[var(--on-accent)]">
+                    <span className="sr-only">You: </span>
+                    <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
                   </div>
-                )}
-                {msg.role === 'user' ? (
-                  <div className="max-w-[85%] md:max-w-[70%] rounded-[24px] rounded-tr-lg px-5 py-3.5 text-sm md:text-base text-white shadow-lg" style={{ background: 'var(--accent)' }}>
-                    <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                  </div>
-                ) : (
-                  <div className="max-w-[85%] md:max-w-[70%] pt-1 text-sm md:text-base text-[var(--ink)]">
-                    <p className="leading-relaxed whitespace-pre-wrap">
+                </div>
+              ) : (
+                <div key={i} className="animate-message-in flex gap-3">
+                  <Avatar />
+                  <div className="max-w-[85%] md:max-w-[70%] pt-0.5 text-sm md:text-base text-[var(--ink)]">
+                    <span className="sr-only">Assistant: </span>
+                    <p className="leading-relaxed whitespace-pre-wrap break-words">
                       {msg.content}
-                      {msg.streaming && <span className="animate-cursor-blink inline-block w-[3px] h-[1em] ml-0.5 align-middle rounded-full" style={{ background: 'var(--accent)' }} />}
+                      {msg.streaming && <span aria-hidden="true" className="animate-cursor-blink inline-block w-[2px] h-[1em] ml-0.5 align-middle bg-[var(--accent)]" />}
                     </p>
                   </div>
-                )}
-              </div>
+                </div>
               );
             })}
-            {isTyping && messages[messages.length - 1]?.content === '' && (
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center flex-shrink-0 overflow-hidden shadow-md">
-                  <img src="/logo.jpeg" alt="Assistant" className="w-full h-full object-contain p-[3px]" />
-                </div>
-                <div className="flex items-center gap-1 h-9 px-1 justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--ink-faint)', animationDelay: '0ms' }} />
-                  <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--ink-faint)', animationDelay: '150ms' }} />
-                  <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--ink-faint)', animationDelay: '300ms' }} />
-                </div>
+            {waitingForFirstWord && (
+              <div className="flex items-center gap-3 text-sm text-[var(--ink-muted)]">
+                <Avatar />
+                <Spinner className="w-4 h-4" label="The assistant is thinking" />
+                Thinking
               </div>
             )}
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-8 pt-16 bg-gradient-to-t from-[var(--canvas)] via-[var(--canvas)]/90 to-transparent">
+        <form onSubmit={handleSend} className="flex-shrink-0 border-t border-[var(--surface-border)] bg-[var(--canvas)] px-4 md:px-8 py-3">
           <div className="max-w-3xl mx-auto">
-            <div className="glass-strong rounded-full flex items-center gap-2 p-2 pl-6">
+            <div className="flex items-center gap-2">
+              <label htmlFor="assistant-message" className="sr-only">Message the assistant</label>
               <input
+                id="assistant-message"
                 type="text"
-                className="flex-1 bg-transparent text-[var(--ink)] focus:outline-none placeholder:text-[var(--ink-faint)] text-sm md:text-base"
-                placeholder="Ask your assistant anything…"
+                autoComplete="off"
+                className="flex-1 min-w-0 bg-transparent border border-[var(--surface-border-strong)] rounded-[var(--radius-md)] px-3 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-faint)] focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]"
+                placeholder="Ask your assistant anything"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               />
-              <button
-                onClick={handleSend}
-                disabled={!input.trim() || isTyping}
-                className="w-11 h-11 rounded-full flex items-center justify-center text-white disabled:opacity-30 transition-all flex-shrink-0"
-                style={{ background: 'var(--accent)' }}
-              >
-                <Send size={17} className="ml-0.5" />
-              </button>
+              <Button type="submit" disabled={!input.trim() || isTyping}><Send size={16} aria-hidden="true" />Send</Button>
             </div>
-            <p className="text-xs text-[var(--ink-faint)] mt-3 text-center">The assistant can make mistakes — double check anything important.</p>
+            <p className="text-xs text-[var(--ink-muted)] mt-2">The assistant can make mistakes, so check anything important.</p>
           </div>
-        </div>
+        </form>
       </div>
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title={`Delete ${pendingDelete.title}?`}
+          message="The whole conversation will be deleted. This can't be undone."
+          confirmLabel="Delete"
+          onConfirm={() => handleDeleteChat(pendingDelete.id)}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
     </div>
   );
 };

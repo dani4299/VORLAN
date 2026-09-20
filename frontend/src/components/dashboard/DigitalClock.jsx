@@ -3,17 +3,12 @@ import React, { useEffect, useState } from 'react';
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-/** `tone`: which text color reads legibly on the active wallpaper - 'light' (white, dark shadow) or 'dark' (near-black, light shadow). */
-export const DigitalClock = ({ compact = false, tone = 'light' }) => {
+/** The time and date, in the text colours the wallpaper container provides (--wp-ink). Updates every 10 seconds; it only shows minutes. */
+export const DigitalClock = () => {
   const [now, setNow] = useState(new Date());
-  const isLight = tone === 'light';
-  const textShadow = isLight ? '0 2px 20px rgba(0,0,0,0.45)' : '0 1px 10px rgba(255,255,255,0.55)';
-  const mainColor = isLight ? 'text-white' : 'text-[#14161a]';
-  const periodColor = isLight ? 'text-white/70' : 'text-[#14161a]/65';
-  const dateColor = isLight ? 'text-white/80' : 'text-[#14161a]/75';
 
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
+    const id = setInterval(() => setNow(new Date()), 10000);
     return () => clearInterval(id);
   }, []);
 
@@ -23,22 +18,12 @@ export const DigitalClock = ({ compact = false, tone = 'light' }) => {
   const period = hours >= 12 ? 'PM' : 'AM';
 
   return (
-    <div className="flex flex-col items-center text-center select-none transition-all duration-300">
-      <div className="flex items-baseline gap-2 leading-none" style={{ textShadow }}>
-        <span
-          className={`${mainColor} font-semibold tracking-tight transition-all duration-300`}
-          style={{ fontSize: compact ? 'clamp(36px, 6vw, 56px)' : 'clamp(64px, 11vw, 104px)' }}
-        >
-          {displayHours}:{minutes}
-        </span>
-        <span className={`font-semibold ${periodColor} ${compact ? 'text-base md:text-lg' : 'text-xl md:text-2xl'}`}>{period}</span>
-      </div>
-      <p
-        className={`font-medium ${dateColor} transition-all duration-300 ${compact ? 'mt-0.5 text-xs md:text-sm' : 'mt-2 text-base md:text-lg'}`}
-        style={{ textShadow }}
-      >
-        {WEEKDAYS[now.getDay()]}, {MONTHS[now.getMonth()]} {now.getDate()}
+    <div className="select-none">
+      <p className="flex items-baseline gap-2 leading-none text-[var(--wp-ink)]">
+        <span className="text-5xl md:text-6xl font-semibold tabular-nums">{displayHours}:{minutes}</span>
+        <span className="text-xl font-medium text-[var(--wp-ink-muted)]">{period}</span>
       </p>
+      <p className="mt-2 text-base text-[var(--wp-ink-muted)]">{WEEKDAYS[now.getDay()]}, {MONTHS[now.getMonth()]} {now.getDate()}</p>
     </div>
   );
 };

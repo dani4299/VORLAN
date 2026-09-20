@@ -1,122 +1,66 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Palette, Settings, User, Pencil, Check, Moon, Sun } from 'lucide-react';
+import { Check, ImageIcon, LayoutGrid } from 'lucide-react';
 import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
-import { IconButton } from '../../components/ui/Button';
-import { WallpaperLayer, getWallpaperTextTone } from '../../components/dashboard/WallpaperLayer';
+import { Button } from '../../components/ui/Button';
+import { WallpaperLayer } from '../../components/dashboard/WallpaperLayer';
+import { getWallpaperTextTone } from '../../components/dashboard/wallpapers';
 import { WallpaperSheet } from '../../components/dashboard/WallpaperSheet';
-import { AccountSettingsModal } from '../../components/dashboard/AccountSettingsModal';
-import { ConnectDeviceButton } from '../../components/dashboard/ConnectDeviceButton';
-import { ConnectDeviceModal } from '../../components/dashboard/ConnectDeviceModal';
 import { DigitalClock } from '../../components/dashboard/DigitalClock';
 import { TileGrid } from '../../components/dashboard/TileGrid';
 import { pickGreeting } from '../../lib/greetings';
 
+// Sits on the wallpaper, so it needs its own opaque background to stay readable on any of them.
+const ON_WALLPAPER = 'bg-[var(--canvas-elevated)]';
+
+/** A person's home: the time, a greeting, and their tiles (apps first; widgets if they've added any) over a wallpaper of their choosing. */
 export const HomePage = () => {
-  const navigate = useNavigate();
-  const { profilePic, username, fullName } = useProfile();
-  const { effectiveMode, toggleTheme, wallpaper } = useTheme();
-  const textTone = getWallpaperTextTone(wallpaper);
+  const { username, fullName } = useProfile();
+  const { wallpaper } = useTheme();
   const displayName = fullName || username;
   const [greeting, setGreeting] = useState(() => pickGreeting(displayName));
   useEffect(() => {
-    if (fullName) setGreeting(pickGreeting(fullName));
-  }, [fullName]);
-  const [wallpaperOpen, setWallpaperOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [connectOpen, setConnectOpen] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [tileRows, setTileRows] = useState(1);
-  const compact = tileRows > 2;
-  const wallpaperTriggerRef = useRef(null);
+    setGreeting(pickGreeting(fullName || username));
+  }, [fullName, username]);
 
-  const chipTextClass = textTone === 'dark' ? 'text-[#14161a]' : 'text-white';
-  const chipShadow = textTone === 'dark' ? '0 1px 6px rgba(255,255,255,0.5)' : '0 1px 8px rgba(0,0,0,0.4)';
+  const [wallpaperOpen, setWallpaperOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const wallpaperButtonRef = useRef(null);
 
   return (
-    <div className="relative h-full overflow-hidden">
+    <div data-wallpaper-tone={getWallpaperTextTone(wallpaper)} className="relative h-full overflow-y-auto">
       <WallpaperLayer wallpaper={wallpaper} />
 
-      <div className="relative z-10 h-full flex flex-col p-6 md:p-10">
-        <header className="flex items-center justify-between flex-shrink-0">
+      <div className="relative max-w-5xl mx-auto px-4 md:px-8 py-6 md:py-10 flex flex-col gap-8">
+        <h1 className="sr-only">Home</h1>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <DigitalClock />
+            <p className="mt-1 text-base text-[var(--wp-ink)]">{greeting}</p>
+          </div>
+
           <div className="flex items-center gap-2">
-            <IconButton
-              ref={wallpaperTriggerRef}
-              onClick={() => setWallpaperOpen((o) => !o)}
-              overlay
-              overlayTone={textTone}
-              title="Customize wallpaper"
+            <Button
+              ref={wallpaperButtonRef}
+              variant="secondary"
+              className={ON_WALLPAPER}
+              aria-haspopup="dialog"
+              aria-expanded={wallpaperOpen}
+              onClick={() => setWallpaperOpen((open) => !open)}
             >
-              <Palette size={18} />
-            </IconButton>
-            <IconButton overlay overlayTone={textTone} onClick={toggleTheme} title={effectiveMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
-              {effectiveMode === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
-            </IconButton>
-            <IconButton overlay overlayTone={textTone} onClick={() => navigate('/dashboard/settings')} title="Settings">
-              <Settings size={18} />
-            </IconButton>
+              <ImageIcon size={16} aria-hidden="true" />Wallpaper
+            </Button>
+            <Button variant="secondary" className={ON_WALLPAPER} aria-pressed={editMode} onClick={() => setEditMode((on) => !on)}>
+              {editMode ? <Check size={16} aria-hidden="true" /> : <LayoutGrid size={16} aria-hidden="true" />}
+              {editMode ? 'Done' : 'Edit tiles'}
+            </Button>
           </div>
-
-          <button
-            onClick={() => setAccountOpen(true)}
-            className={`flex items-center gap-3 rounded-full pl-1 pr-3 py-1 transition-colors ${textTone === 'dark' ? 'icon-btn-overlay-hover-dark' : 'icon-btn-overlay-hover'}`}
-          >
-            <div className={`w-9 h-9 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 border ${textTone === 'dark' ? 'bg-black/[0.05] border-black/10' : 'bg-white/10 border-white/15'}`}>
-              {profilePic ? (
-                <img src={profilePic} alt={displayName} className="w-full h-full object-cover" />
-              ) : (
-                <User size={16} className={textTone === 'dark' ? 'text-[#14161a]/70' : 'text-white/70'} />
-              )}
-            </div>
-            <span className={`text-sm font-semibold ${chipTextClass}`} style={{ textShadow: chipShadow }}>
-              {displayName}
-            </span>
-          </button>
-        </header>
-
-        {wallpaperOpen && (
-          <WallpaperSheet anchorRef={wallpaperTriggerRef} onClose={() => setWallpaperOpen(false)} />
-        )}
-        {accountOpen && <AccountSettingsModal onClose={() => setAccountOpen(false)} />}
-        {connectOpen && <ConnectDeviceModal onClose={() => setConnectOpen(false)} />}
-
-        {/*
-          Top-aligned, not centered: content height varies with tile count/edit-mode controls.
-          Centering would clip symmetrically top+bottom once content overflows, silently
-          hiding/disabling whatever sits at the top (the edit-mode controls did exactly this).
-          Top-aligning means any overflow only ever pushes into scrollable space below, never the
-          controls above it. Compact mode (reduced gaps/padding) shrinks content first when there
-          are many tiles; overflow-y-auto is the fallback for phone-sized viewports where even
-          compact mode still doesn't leave enough room to show every tile.
-        */}
-        <div className={`flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto transition-all duration-300 ${compact ? 'gap-2 py-2' : 'gap-6 py-4'}`}>
-          <div className={`flex flex-col items-center flex-shrink-0 transition-all duration-300 ${compact ? 'gap-1' : 'gap-3'}`}>
-            <DigitalClock compact={compact} tone={textTone} />
-            <p
-              className={`font-medium transition-all duration-300 ${textTone === 'dark' ? 'text-[#14161a]/85' : 'text-white/85'} ${compact ? 'text-xs md:text-sm' : 'text-base md:text-lg'}`}
-              style={{ textShadow: chipShadow }}
-            >
-              {greeting}
-            </p>
-          </div>
-
-          <TileGrid editMode={editMode} onRowsChange={setTileRows} />
         </div>
 
-        <div className="flex-shrink-0 flex justify-between">
-          <ConnectDeviceButton onClick={() => setConnectOpen(true)} overlayTone={textTone} />
-          <IconButton
-            onClick={() => setEditMode((o) => !o)}
-            overlay={!editMode}
-            overlayTone={textTone}
-            style={editMode ? { background: 'var(--accent)', color: '#fff' } : undefined}
-            title={editMode ? 'Done editing' : 'Edit tiles'}
-          >
-            {editMode ? <Check size={18} /> : <Pencil size={18} />}
-          </IconButton>
-        </div>
+        <TileGrid editMode={editMode} />
       </div>
+
+      {wallpaperOpen && <WallpaperSheet anchorRef={wallpaperButtonRef} onClose={() => setWallpaperOpen(false)} />}
     </div>
   );
 };

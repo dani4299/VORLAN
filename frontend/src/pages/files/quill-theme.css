@@ -1,0 +1,32 @@
+/* The note editor's rich-text toolbar and body, restyled to the app's tokens (Quill ships its own light theme). */
+.note-editor .quill { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.note-editor .ql-toolbar.ql-snow {
+  border: none !important;
+  border-bottom: 1px solid var(--surface-border) !important;
+  padding: 8px 0 !important;
+  font-family: inherit !important;
+}
+.note-editor .ql-container.ql-snow {
+  border: none !important;
+  font-family: inherit !important;
+  font-size: 1rem !important;
+  flex: 1;
+  overflow-y: auto;
+}
+.note-editor .ql-editor { padding: 16px 0 !important; color: var(--ink); }
+.note-editor .ql-editor.ql-blank::before { color: var(--ink-faint) !important; font-style: normal !important; left: 0 !important; }
+.note-editor .ql-editor p,
+.note-editor .ql-editor ul,
+.note-editor .ql-editor ol { margin-bottom: 0.75rem; }
+.note-editor .ql-snow .ql-stroke { stroke: var(--ink-muted) !important; }
+.note-editor .ql-snow .ql-fill,
+.note-editor .ql-snow .ql-stroke.ql-fill { fill: var(--ink-muted) !important; }
+.note-editor .ql-snow .ql-picker { color: var(--ink-muted) !important; }
+.note-editor .ql-snow .ql-picker-options {
+  background-color: var(--canvas-elevated) !important;
+  border-color: var(--surface-border-strong) !important;
+  border-radius: var(--radius-md) !important;
+}
+.note-editor .ql-snow .ql-picker-item:hover { color: var(--ink) !important; }
+.note-editor button:hover .ql-stroke { stroke: var(--accent) !important; }
+.note-editor button:hover .ql-fill { fill: var(--accent) !important; }

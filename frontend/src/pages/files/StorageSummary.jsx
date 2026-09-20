@@ -1,67 +1,53 @@
 import React, { useEffect, useState } from 'react';
-import { HardDrive } from 'lucide-react';
 import api, { authHeaders, getUsername } from '../../lib/api';
-import { GlassPanel } from '../../components/ui/GlassPanel';
+import { Meter } from '../../components/ui/Meter';
 import { formatBytes } from '../../lib/format';
 
-const CATEGORY_META = [
-  { key: 'documents', label: 'Documents', color: 'var(--accent)' },
-  { key: 'music', label: 'Music', color: 'var(--hue-violet)' },
-  { key: 'gallery', label: 'Gallery', color: 'var(--hue-emerald)' },
+const CATEGORIES = [
+  { key: 'documents', label: 'Documents' },
+  { key: 'music', label: 'Music' },
+  { key: 'gallery', label: 'Pictures' },
 ];
 
+/** How much space the files use: the whole disk for shared files, or just this person's private space. Renders nothing until it has numbers. */
 export const StorageSummary = ({ isPersonal }) => {
   const [summary, setSummary] = useState(null);
 
   useEffect(() => {
     const scope = isPersonal ? `?scope=personal&username=${encodeURIComponent(getUsername())}` : '';
     api.get(`/storage/summary${scope}`, { headers: authHeaders() })
-      .then(res => setSummary(res.data))
-      .catch(err => console.warn("Couldn't load storage usage", err));
+      .then((res) => setSummary(res.data))
+      .catch((err) => console.warn("Couldn't load storage usage", err));
   }, [isPersonal]);
 
   if (!summary) return null;
 
-  const usedByCategories = CATEGORY_META.reduce((sum, c) => sum + (summary.categories[c.key] || 0), 0);
-  const diskPercent = summary.disk ? Math.min(100, Math.round((summary.disk.usedBytes / summary.disk.totalBytes) * 100)) : null;
+  const usedByCategories = CATEGORIES.reduce((sum, c) => sum + (summary.categories[c.key] || 0), 0);
+  const disk = !isPersonal ? summary.disk : null;
+  const headline = isPersonal
+    ? `${formatBytes(usedByCategories)} used in your private space`
+    : disk ? `${formatBytes(disk.usedBytes)} of ${formatBytes(disk.totalBytes)} used` : `${formatBytes(usedByCategories)} used`;
 
   return (
-    <GlassPanel className="p-6 mb-6">
-      <div className="flex items-center gap-3 mb-5">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(76,141,255,0.15)' }}>
-          <HardDrive size={16} style={{ color: 'var(--accent)' }} />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-[var(--ink)]">Storage</p>
-          <p className="text-xs text-[var(--ink-muted)]">
-            {isPersonal ? `${formatBytes(usedByCategories)} used in your private space` : diskPercent !== null ? `${formatBytes(summary.disk.usedBytes)} of ${formatBytes(summary.disk.totalBytes)} used` : `${formatBytes(usedByCategories)} used`}
-          </p>
-        </div>
-      </div>
+    <section aria-label="Storage" className="mb-6">
+      <h2 className="text-sm font-semibold text-[var(--ink)]">Storage</h2>
+      <p className="text-sm text-[var(--ink-muted)] mt-0.5 mb-3">{headline}</p>
+      {disk && <Meter value={disk.usedBytes} max={disk.totalBytes} label="Disk in use" valueText={headline} className="mb-4" />}
 
-      {!isPersonal && diskPercent !== null && (
-        <div className="h-2 rounded-full bg-[var(--overlay-3)] overflow-hidden mb-5">
-          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${diskPercent}%`, background: 'var(--accent)' }} />
-        </div>
-      )}
-
-      <div className="flex gap-4">
-        {CATEGORY_META.map(c => {
+      <ul className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3">
+        {CATEGORIES.map((c) => {
           const bytes = summary.categories[c.key] || 0;
-          const pct = usedByCategories > 0 ? Math.max(4, Math.round((bytes / usedByCategories) * 100)) : 0;
           return (
-            <div key={c.key} className="flex-1">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-medium text-[var(--ink-muted)]">{c.label}</span>
-                <span className="text-xs text-[var(--ink-faint)]">{formatBytes(bytes)}</span>
+            <li key={c.key}>
+              <div className="flex items-baseline justify-between mb-1.5 text-sm">
+                <span className="text-[var(--ink)]">{c.label}</span>
+                <span className="text-[var(--ink-muted)] tabular-nums">{formatBytes(bytes)}</span>
               </div>
-              <div className="h-1.5 rounded-full bg-[var(--overlay-3)] overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${bytes > 0 ? pct : 0}%`, background: c.color }} />
-              </div>
-            </div>
+              <Meter value={bytes} max={usedByCategories || 1} label={`${c.label} share of used space`} valueText={formatBytes(bytes)} tone="accent" />
+            </li>
           );
         })}
-      </div>
-    </GlassPanel>
+      </ul>
+    </section>
   );
 };

@@ -6,6 +6,8 @@ export const MEDIA_BASE = `http://${currentIP}:5000/media`;
 
 export const getToken = () => localStorage.getItem('vorlan_token');
 export const getUsername = () => localStorage.getItem('vorlan_username') || 'Administrator';
+export const getRole = () => localStorage.getItem('vorlan_role') || 'guest';
+export const isAdmin = () => getRole() === 'admin';
 
 export const isAuthenticated = () => !!getToken();
 
@@ -57,6 +59,22 @@ export const logout = () => {
   localStorage.removeItem('vorlan_username');
 };
 
+/** Keeps the stored role in step after an admin changes it, so the UI matches what the server will allow. */
+export const setRole = (role) => localStorage.setItem('vorlan_role', role);
+
 const api = axios.create({ baseURL: API_BASE });
+
+// The server ends a session when the token has expired or the account was deleted. Whatever page
+// the person is on, the useful thing is the sign-in screen, not a page full of failed requests.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && error.response.data?.code === 'session_ended' && getToken()) {
+      logout();
+      window.location.assign('/login');
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default api;

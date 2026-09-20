@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import api, { authHeaders, getUsername, updateSession } from '../lib/api';
+import api, { authHeaders, getUsername, isAdmin, updateSession } from '../lib/api';
 import { mergeDashboardLayout } from '../lib/dashboardTiles';
 
 const ProfileContext = createContext(null);
@@ -52,7 +52,7 @@ export const ProfileProvider = ({ children }) => {
    */
   const setDashboardLayout = (updater) => {
     setDashboardLayoutState((prevRaw) => {
-      const next = typeof updater === 'function' ? updater(mergeDashboardLayout(prevRaw)) : updater;
+      const next = typeof updater === 'function' ? updater(mergeDashboardLayout(prevRaw, isAdmin())) : updater;
       api.post(`/profile/${username}`, { dashboardLayout: next }, { headers: authHeaders() })
         .catch((err) => console.error('Failed to sync dashboard layout', err));
       return next;

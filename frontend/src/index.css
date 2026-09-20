@@ -4,7 +4,7 @@
  * Custom rules below live in @layer base / @layer components so that Tailwind
  * utility classes (which Tailwind puts in its own, higher-priority "utilities"
  * layer) can always override them — e.g. `.fixed` on an element that also has
- * `.glass-strong` must still win. Without an explicit layer, plain CSS always
+ * `.surface-strong` must still win. Without an explicit layer, plain CSS always
  * beats layered CSS regardless of source order or specificity, which silently
  * broke every Tailwind utility applied alongside a custom class.
  */
@@ -16,21 +16,52 @@
     --canvas: #08090b;
     --canvas-elevated: #0e0f12;
 
-    /* Ink */
+    /* Ink. Every tier is >= 4.5:1 (WCAG AA) on the canvas, elevated surfaces and overlay chips in
+       both themes - verified numerically, not by eye. Faint is for hints/captions, still readable. */
     --ink: #f4f5f7;
-    --ink-muted: #91959e;
-    --ink-faint: #55585f;
+    --ink-muted: #a4a8b1;
+    --ink-faint: #8e9095;
 
-    /* Accent — the single interactive color */
+    /* Accent — the single interactive color.
+         --accent          text, icons, focus rings, links (>= 4.5:1 on surfaces)
+         --accent-solid    fill for primary buttons / selected states, always paired with --on-accent
+                           (>= 4.5:1). Never put white text on plain --accent: 3.2:1 in the blue scheme. */
     --accent: #4c8dff;
     --accent-strong: #2f6fe0;
     --accent-wash: rgba(76, 141, 255, 0.16);
+    --accent-solid: #3e74d1;
+    --on-accent: #ffffff;
 
     /* Identity hues — section/icon color only, never buttons */
-    --hue-violet: #9c6bff;
+    --hue-violet: #a172ff;
     --hue-amber: #ffb454;
     --hue-rose: #ff6482;
     --hue-emerald: #34d399;
+
+    /* Status — semantic meaning, independent of the accent scheme. Text on the matching -wash
+       stays >= 4.5:1. Use these (not hues) for anything that states health, success or failure. */
+    --success: #34d399;
+    --success-wash: rgba(52, 211, 153, 0.14);
+    --warning: #ffb454;
+    --warning-wash: rgba(255, 180, 84, 0.14);
+    --danger: #ff6482;
+    --danger-wash: rgba(255, 100, 130, 0.14);
+    --danger-solid: #c44d64;
+    --on-danger: #ffffff;
+    --info: #4c8dff;
+    --info-wash: rgba(76, 141, 255, 0.14);
+
+    /* Shape. One small scale, used consistently: controls 6px, cards and popovers 8px, dialogs and
+       windows 12px. Nothing in this app is rounder than that. */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+
+    /* Elevation. Flat by default (border only); a floating layer gets this one small shadow. */
+    --shadow-popover: 0 2px 8px rgba(0, 0, 0, 0.12);
+
+    --font-mono: ui-monospace, 'Cascadia Mono', 'SF Mono', Consolas, 'Liberation Mono', monospace;
 
     /* Flat surface material — cards and panels */
     --surface-border: rgba(255, 255, 255, 0.08);
@@ -63,10 +94,26 @@
     --canvas-elevated: #ffffff;
 
     --ink: #14161a;
-    --ink-muted: #62666f;
-    --ink-faint: #9a9ea6;
+    --ink-muted: #4f535b;
+    --ink-faint: #676a6f;
 
+    --accent: #3767ba;
     --accent-wash: rgba(47, 111, 224, 0.12);
+
+    /* Bright identity hues fail 3:1 (icons) on white; these are their AA-safe light-mode forms. */
+    --hue-violet: #7852c4;
+    --hue-amber: #8a612d;
+    --hue-rose: #ad4458;
+    --hue-emerald: #1d7656;
+
+    --success: #1d7656;
+    --success-wash: rgba(29, 118, 86, 0.12);
+    --warning: #8a612d;
+    --warning-wash: rgba(138, 97, 45, 0.12);
+    --danger: #ad4458;
+    --danger-wash: rgba(173, 68, 88, 0.12);
+    --info: #3767ba;
+    --info-wash: rgba(55, 103, 186, 0.12);
 
     --surface-border: rgba(15, 17, 21, 0.08);
     --surface-border-strong: rgba(15, 17, 21, 0.14);
@@ -84,31 +131,53 @@
    * of light/dark - only --accent/--accent-strong/--accent-wash change, so this works layered on
    * top of either theme block above. Blue is the bare-:root default (no attribute needed for it).
    */
+  /* Each scheme sets its dark-theme values, then a [data-theme='light'] override (higher
+     specificity) that darkens --accent for text. --accent-solid/--on-accent are theme-independent:
+     the vivid emerald and amber take dark text, the rest take white on a darkened fill. */
   :root[data-scheme='grey'] {
     --accent: #8b8f98;
     --accent-strong: #6b6f78;
     --accent-wash: rgba(139, 143, 152, 0.16);
+    --accent-solid: #71757b;
+    --on-accent: #ffffff;
   }
+  :root[data-theme='light'][data-scheme='grey'] { --accent: #676a70; }
+
   :root[data-scheme='violet'] {
-    --accent: #9c6bff;
+    --accent: #a172ff;
     --accent-strong: #7c4fe0;
     --accent-wash: rgba(156, 107, 255, 0.16);
+    --accent-solid: #855bda;
+    --on-accent: #ffffff;
   }
+  :root[data-theme='light'][data-scheme='violet'] { --accent: #7852c4; }
+
   :root[data-scheme='emerald'] {
     --accent: #34d399;
     --accent-strong: #1fae7a;
     --accent-wash: rgba(52, 211, 153, 0.16);
+    --accent-solid: #34d399;
+    --on-accent: #0b0c0e;
   }
+  :root[data-theme='light'][data-scheme='emerald'] { --accent: #1d7656; }
+
   :root[data-scheme='rose'] {
     --accent: #ff6482;
     --accent-strong: #e0445f;
     --accent-wash: rgba(255, 100, 130, 0.16);
+    --accent-solid: #c44d64;
+    --on-accent: #ffffff;
   }
+  :root[data-theme='light'][data-scheme='rose'] { --accent: #ad4458; }
+
   :root[data-scheme='amber'] {
     --accent: #ffb454;
     --accent-strong: #e0952f;
     --accent-wash: rgba(255, 180, 84, 0.16);
+    --accent-solid: #ffb454;
+    --on-accent: #0b0c0e;
   }
+  :root[data-theme='light'][data-scheme='amber'] { --accent: #8a612d; }
 
   * {
     box-sizing: border-box;
@@ -148,26 +217,36 @@
 }
 
 /* ==========================================
-   FLAT SURFACE MATERIAL
+   SURFACES
    ========================================== */
 
 @layer components {
-  .glass,
-  .glass-strong {
+  /* A solid container: elevated background and a 1px border, no shadow, no blur. */
+  .surface,
+  .surface-strong {
     position: relative;
     background: var(--canvas-elevated);
     border: 1px solid var(--surface-border);
-    box-shadow: 0 20px 40px -28px rgba(0, 0, 0, 0.6);
   }
 
-  .glass-strong {
+  .surface-strong {
     border-color: var(--surface-border-strong);
   }
 
-  /* Theme-reactive replacement for the old hardcoded bg-white/[x] + border-white/[x] chip pattern. */
-  .chip {
-    background: var(--overlay-2);
-    border: 1px solid var(--overlay-3);
+  /* Layers that float above the page (dialogs, toasts, menus, windows). */
+  .elevated {
+    box-shadow: var(--shadow-popover);
+  }
+
+  /* Text sitting directly on the user's wallpaper. The wallpaper's own brightness, not the app theme,
+     decides which pair is used: light text on a dark wallpaper, near-black text on a light one. */
+  [data-wallpaper-tone='light'] {
+    --wp-ink: #f4f5f7;
+    --wp-ink-muted: #d3d6dc;
+  }
+  [data-wallpaper-tone='dark'] {
+    --wp-ink: #14161a;
+    --wp-ink-muted: #3c4048;
   }
 
   /* Theme-reactive modal/sheet backdrop - was hardcoded bg-black/60. */
@@ -175,57 +254,16 @@
     background: var(--scrim-strong);
   }
 
-  /* Always a translucent white chip, regardless of theme - for controls floating on a wallpaper image. */
-  .icon-btn-overlay {
-    background: rgba(255, 255, 255, 0.1);
+  /* Things appearing (toasts, dialogs, sheets, chat messages) simply fade in: 150ms, opacity only.
+     No sliding, scaling or bouncing - motion shouldn't draw more attention than the content. */
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
-  .icon-btn-overlay:hover {
-    background: rgba(255, 255, 255, 0.2);
-  }
-  .icon-btn-overlay-hover:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
-  /* Dark-icon counterpart, for controls floating on a wallpaper bright enough to need dark icons. */
-  .icon-btn-overlay-dark {
-    background: rgba(15, 17, 21, 0.07);
-  }
-  .icon-btn-overlay-dark:hover {
-    background: rgba(15, 17, 21, 0.14);
-  }
-  .icon-btn-overlay-hover-dark:hover {
-    background: rgba(15, 17, 21, 0.07);
-  }
-
-  @keyframes toast-in {
-    from { opacity: 0; transform: translateY(-10px) scale(0.97); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  .animate-toast-in {
-    animation: toast-in 0.22s ease-out;
-  }
-
-  @keyframes sheet-in {
-    from { opacity: 0; transform: translateY(16px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  .animate-sheet-in {
-    animation: sheet-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  @keyframes sheet-up {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
-  }
-  .animate-sheet-up {
-    animation: sheet-up 0.32s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  @keyframes message-in {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+  .animate-toast-in,
+  .animate-sheet-in,
   .animate-message-in {
-    animation: message-in 0.25s ease-out;
+    animation: fade-in 0.15s ease-out;
   }
 
   @keyframes cursor-blink {
@@ -236,11 +274,25 @@
     animation: cursor-blink 0.9s ease-in-out infinite;
   }
 
-  @keyframes tile-wiggle {
-    0%, 100% { transform: rotate(-0.6deg); }
-    50% { transform: rotate(0.6deg); }
+  /* Loading placeholder: a flat block that gently fades, no gradient sweep. */
+  @keyframes skeleton-pulse {
+    50% { opacity: 0.5; }
   }
-  .animate-tile-wiggle {
-    animation: tile-wiggle 0.22s ease-in-out infinite;
+  .skeleton {
+    background: var(--overlay-3);
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  }
+}
+
+/* Motion is decoration, never information: honor the OS "reduce motion" setting everywhere.
+   Unlayered on purpose - an unlayered !important beats every Tailwind utility. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

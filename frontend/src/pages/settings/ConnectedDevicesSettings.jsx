@@ -1,109 +1,94 @@
-import React, { useEffect, useState } from 'react';
-import { Smartphone, Laptop, Monitor, Pencil, Check, X } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Pencil } from 'lucide-react';
+import { Button, IconButton } from '../../components/ui/Button';
+import { DataTable } from '../../components/ui/DataTable';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { TextField } from '../../components/ui/Field';
+import { Modal } from '../../components/ui/Modal';
 import { Spinner } from '../../components/ui/Spinner';
-import { EmptyState } from '../../components/ui/EmptyState';
+import { useToast } from '../../context/ToastContext';
 import { listDevices, renameDevice, isThisDevice } from '../../lib/devicesApi';
-import { formatBytes, formatRelativeTime } from '../../lib/format';
+import { formatBytes, formatDateTime, formatRelativeTime } from '../../lib/format';
+import { usePolling } from '../../lib/usePolling';
 
-const deviceIcon = (label) => {
-  if (/iPhone|iPad|Android/.test(label)) return Smartphone;
-  if (/Windows|Mac|Linux/.test(label)) return Laptop;
-  return Monitor;
-};
-
-const DeviceRow = ({ device, onRenamed }) => {
-  const [editing, setEditing] = useState(false);
+const RenameDialog = ({ device, onClose, onRenamed }) => {
   const [value, setValue] = useState(device.label);
   const [saving, setSaving] = useState(false);
-  const Icon = deviceIcon(device.label);
-  const mine = isThisDevice(device.id);
+  const [error, setError] = useState('');
 
-  const save = () => {
-    const trimmed = value.trim();
-    if (!trimmed || trimmed === device.label) { setEditing(false); setValue(device.label); return; }
+  const save = async (e) => {
+    e.preventDefault();
+    const label = value.trim();
+    if (!label) return;
     setSaving(true);
-    renameDevice(device.id, trimmed)
-      .then(() => onRenamed(device.id, trimmed))
-      .finally(() => { setSaving(false); setEditing(false); });
+    setError('');
+    try {
+      await renameDevice(device.id, label);
+      onRenamed(label);
+    } catch (err) {
+      setError(err.response?.data?.error || "Couldn't rename this device.");
+      setSaving(false);
+    }
   };
 
-  const cancel = () => { setValue(device.label); setEditing(false); };
-
   return (
-    <div className="flex items-center gap-3 py-4 first:pt-0 last:pb-0 border-b border-[var(--surface-border)] last:border-b-0">
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 chip">
-        <Icon size={17} className="text-[var(--ink-muted)]" />
-      </div>
-
-      <div className="flex-1 min-w-0">
-        {editing ? (
-          <div className="flex items-center gap-2">
-            <input
-              autoFocus
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel(); }}
-              className="min-w-0 flex-1 bg-[var(--overlay-1)] border border-[var(--surface-border)] rounded-lg px-2.5 py-1 text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
-            />
-            <button onClick={save} disabled={saving} className="text-[var(--accent)] hover:brightness-125 disabled:opacity-40 flex-shrink-0" title="Save">
-              <Check size={16} />
-            </button>
-            <button onClick={cancel} disabled={saving} className="text-[var(--ink-muted)] hover:text-[var(--ink)] flex-shrink-0" title="Cancel">
-              <X size={16} />
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-medium text-[var(--ink)] truncate">{device.label}</p>
-            {mine && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: 'var(--accent-wash)', color: 'var(--accent)' }}>
-                This device
-              </span>
-            )}
-            <button onClick={() => setEditing(true)} className="text-[var(--ink-faint)] hover:text-[var(--ink)] flex-shrink-0" title="Rename device">
-              <Pencil size={12} />
-            </button>
-          </div>
-        )}
-        <p className="text-xs text-[var(--ink-muted)] mt-0.5">
-          Active {formatRelativeTime(device.lastSeen)} · {device.ip || 'Unknown IP'}
-        </p>
-      </div>
-
-      <p className="text-sm text-[var(--ink-muted)] flex-shrink-0">{formatBytes(device.bytes)}</p>
-    </div>
+    <Modal title="Rename device" onClose={onClose}>
+      <form onSubmit={save} className="space-y-4">
+        <TextField label="Device name" value={value} onChange={(e) => setValue(e.target.value)} required data-autofocus />
+        {error && <p role="alert" className="text-sm text-[var(--danger)]">{error}</p>}
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button type="submit" loading={saving} disabled={!value.trim()}>Save</Button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 
+/** Every browser and phone signed in to this account, and how much data each has used. */
 export const ConnectedDevicesSettings = () => {
-  const [devices, setDevices] = useState(null);
-  const [error, setError] = useState(null);
+  const showToast = useToast();
+  const { data: devices, error, reload } = usePolling(listDevices, 15000);
+  const [renaming, setRenaming] = useState(null);
 
-  useEffect(() => {
-    listDevices()
-      .then(setDevices)
-      .catch((err) => setError(err.response?.data?.error || "Couldn't load your devices."));
-  }, []);
+  const columns = useMemo(() => [
+    {
+      key: 'label', header: 'Device', sortValue: (d) => d.label.toLowerCase(),
+      render: (d) => <span className="font-medium">{d.label}{isThisDevice(d.id) && <span className="ml-2 text-xs font-normal text-[var(--ink-muted)]">(this device)</span>}</span>,
+    },
+    {
+      key: 'lastSeen', header: 'Last active', sortValue: (d) => d.lastSeen,
+      render: (d) => <time dateTime={new Date(d.lastSeen).toISOString()} title={formatDateTime(d.lastSeen)}>{formatRelativeTime(d.lastSeen)}</time>,
+      className: 'whitespace-nowrap',
+    },
+    { key: 'ip', header: 'Address', sortValue: (d) => d.ip || '', render: (d) => d.ip || 'Unknown', className: 'tabular-nums' },
+    { key: 'bytes', header: 'Data used', align: 'right', sortValue: (d) => d.bytes, render: (d) => formatBytes(d.bytes), className: 'tabular-nums whitespace-nowrap' },
+    {
+      key: 'actions', header: <span className="sr-only">Actions</span>, align: 'right',
+      render: (d) => <IconButton label={`Rename ${d.label}`} onClick={() => setRenaming(d)}><Pencil size={15} aria-hidden="true" /></IconButton>,
+    },
+  ], []);
 
-  const handleRenamed = (id, label) => {
-    setDevices((prev) => prev.map((d) => (d.id === id ? { ...d, label } : d)));
-  };
-
-  if (error) {
-    return <p className="text-sm text-center py-10" style={{ color: 'var(--hue-rose)' }}>{error}</p>;
-  }
-
-  if (!devices) {
-    return <div className="flex justify-center py-10"><Spinner /></div>;
-  }
+  if (error && !devices) return <ErrorState message={error} onRetry={reload} />;
+  if (!devices) return <div className="flex justify-center py-10"><Spinner label="Loading your devices" /></div>;
 
   return (
-    <div className="glass rounded-[24px] p-6 md:p-7 max-w-lg">
-      {devices.length === 0 ? (
-        <EmptyState icon={Smartphone} title="No devices yet" hint="Devices that sign in to your account will show up here." />
-      ) : (
-        devices.map((device) => <DeviceRow key={device.id} device={device} onRenamed={handleRenamed} />)
+    <>
+      <DataTable
+        caption="Your connected devices"
+        columns={columns}
+        rows={devices}
+        getRowId={(d) => d.id}
+        initialSort={{ key: 'lastSeen', dir: 'desc' }}
+        empty="No devices yet. Devices that sign in to your account will show up here."
+      />
+      {renaming && (
+        <RenameDialog
+          device={renaming}
+          onClose={() => setRenaming(null)}
+          onRenamed={(label) => { setRenaming(null); showToast(`Renamed to ${label}.`, 'success'); reload(); }}
+        />
       )}
-    </div>
+    </>
   );
 };
