@@ -28,6 +28,8 @@ lerna-debug.log*
 
 # Real user data - do not commit
 backend/vorlan-secure.db
+# The sign-in key and HTTPS certificate this install generated for itself - never commit
+backend/secrets/
 backend/vorlan.db
 backend/profiles.json
 backend/ai_history.json

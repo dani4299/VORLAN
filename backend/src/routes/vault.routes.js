@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const verifyToken = require('../middleware/auth.middleware');
 const { GLOBAL_MEDIA_DIR } = require('../config/paths');
+const { isSafeFileName } = require('../utils/safeName');
 
 const router = express.Router();
 
@@ -48,6 +49,9 @@ router.get('/gallery', verifyToken, (req, res) => {
 });
 
 router.delete('/delete/:filename', verifyToken, (req, res) => {
+  // The name comes from the URL, so it must be a plain file name: an encoded "..%2F" would otherwise
+  // let a caller delete anything the server can reach.
+  if (!isSafeFileName(req.params.filename)) return res.status(400).json({ error: 'That isn\'t a valid file name.' });
   const filePath = path.join(GLOBAL_MEDIA_DIR, req.params.filename);
 
   if (fs.existsSync(filePath)) {

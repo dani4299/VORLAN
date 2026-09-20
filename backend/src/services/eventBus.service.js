@@ -18,4 +18,6 @@ const on = (event, handler) => {
 
 const emit = (event, payload) => emitter.emit(event, payload);
 
-module.exports = { on, emit };
+const hasListeners = (event) => emitter.listenerCount(event) > 0;
+
+module.exports = { on, emit, hasListeners };

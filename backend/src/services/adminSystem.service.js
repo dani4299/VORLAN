@@ -4,9 +4,12 @@ const path = require('path');
 const dns = require('dns');
 const si = require('systeminformation');
 const db = require('../db');
-const { PORT: CONFIGURED_PORT } = require('../config/constants');
-
-const PORT = Number(CONFIGURED_PORT); // a string when it comes from the environment
+const {
+  PORT, HTTPS_PORT, TLS_ENABLED, ACCESS_TOKEN_TTL_SECONDS, REFRESH_TTL_SECONDS, SESSION_MAX_SECONDS,
+} = require('../config/constants');
+const { describeJwtSecret } = require('../config/secrets');
+const sessions = require('./sessions.service');
+const tls = require('./tls.service');
 const {
   ROOT_DIR, SECURE_VAULT_DIR, GLOBAL_MEDIA_DIR, PERSONAL_VAULT_DIR, EXPLORER_DIR, DB_FILE, FRONTEND_INDEX_HTML,
 } = require('../config/paths');
@@ -236,8 +239,10 @@ const buildNetwork = async () => {
     dnsServers: dns.getServers(),
     interfaces,
     // Where to open VORLAN from another device on the network.
-    urls: interfaces.filter((n) => n.up && n.ip4).map((n) => ({ interface: n.name, url: `http://${n.ip4}:${PORT}` })),
+    // With HTTPS on, the plain address only redirects, so the secure one is the address to give out.
+    urls: interfaces.filter((n) => n.up && n.ip4).map((n) => ({ interface: n.name, url: TLS_ENABLED ? `https://${n.ip4}:${HTTPS_PORT}` : `http://${n.ip4}:${PORT}`, secure: TLS_ENABLED })),
     port: PORT,
+    httpsPort: TLS_ENABLED ? HTTPS_PORT : null,
   };
 };
 
@@ -249,6 +254,20 @@ const getNetwork = async () => {
 };
 
 // ---------------------------------------------------------------- about + diagnostics
+
+/** How sign-in and transport security are set up right now. Describes the secrets; never contains them. */
+const getSecurity = async () => ({
+  tls: tls.getTlsInfo(),
+  // "generated" only means it was made during this start-up; to an admin it is simply the stored key file.
+  jwtSecret: (({ source, location }) => ({ source: source === 'environment' ? 'environment' : 'file', location, createdThisRun: source === 'generated' }))(describeJwtSecret()),
+  sessions: {
+    active: await sessions.countActive(),
+    accessTokenMinutes: Math.round(ACCESS_TOKEN_TTL_SECONDS / 60),
+    idleDays: Math.round(REFRESH_TTL_SECONDS / 86400),
+    maxDays: Math.round(SESSION_MAX_SECONDS / 86400),
+  },
+  ports: { http: PORT, https: HTTPS_PORT },
+});
 
 const getAbout = () => ({
   product: 'VORLAN',
@@ -264,12 +283,13 @@ const getAbout = () => ({
 
 /** Everything support would ask for. Deliberately contains no passwords, PIN hashes or signing secrets. */
 const getDiagnostics = async () => {
-  const [info, services, network, storage, recent] = await Promise.all([
+  const [info, services, network, storage, recent, security] = await Promise.all([
     systemInfo.getInfo(),
     getServices(),
     getNetwork(),
     getStorage(),
     auditLog.list({ limit: 200 }),
+    getSecurity(),
   ]);
   return {
     generatedAt: new Date().toISOString(),
@@ -278,9 +298,10 @@ const getDiagnostics = async () => {
     services: services.services,
     network,
     storage,
+    security,
     tasks: jobQueue.list(),
     recentLog: recent.entries,
   };
 };
 
-module.exports = { getStorage, getServices, getNetwork, getAbout, getDiagnostics };
+module.exports = { getStorage, getServices, getNetwork, getAbout, getSecurity, getDiagnostics };

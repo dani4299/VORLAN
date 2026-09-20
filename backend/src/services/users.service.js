@@ -1,5 +1,7 @@
 const bcrypt = require('bcryptjs');
 const db = require('../db');
+const sessions = require('./sessions.service');
+const { usernameProblem } = require('../utils/safeName');
 
 const ROLES = ['admin', 'employee', 'guest'];
 const MIN_PASSWORD_LENGTH = 8;
@@ -24,7 +26,8 @@ const checkPassword = (password) => {
 const createUser = async ({ username, password, email, fullName, role }) => {
   const name = typeof username === 'string' ? username.trim() : '';
   const mail = typeof email === 'string' ? email.trim() : '';
-  if (!name) throw problem(400, 'Enter a username.');
+  const nameProblem = usernameProblem(name);
+  if (nameProblem) throw problem(400, nameProblem);
   if (!EMAIL.test(mail)) throw problem(400, 'Enter a valid email address.');
   if (!ROLES.includes(role)) throw problem(400, 'Role must be admin, employee, or guest.');
   checkPassword(password);
@@ -47,7 +50,9 @@ const resetPassword = async (id, password) => {
   const target = await get('SELECT id, username FROM users WHERE id = ?', [id]);
   if (!target) throw problem(404, 'That account no longer exists.');
   await run('UPDATE users SET password = ? WHERE id = ?', [await bcrypt.hash(password, 10), id]);
-  return target;
+  // Whoever was signed in with the old password is signed out: that is usually the reason for a reset.
+  const signedOut = await sessions.revokeForUser(id, { reason: 'password reset by an administrator' });
+  return { ...target, signedOut };
 };
 
 /**
@@ -71,6 +76,7 @@ const deleteUser = async (id, actorId) => {
     run('DELETE FROM notes WHERE owner_username = ?', [target.username]),
     run('DELETE FROM vault_pins WHERE username = ?', [target.username]),
     run('DELETE FROM devices WHERE user_id = ?', [id]),
+    sessions.deleteForUser(id),
     run('DELETE FROM ai_history WHERE user_id = ?', [id]),
   ]);
   return target;

@@ -1,7 +1,13 @@
 const express = require('express');
+const { verifyToken, requireVault } = require('../middleware/auth.middleware');
 const notes = require('../services/notes.service');
 
 const router = express.Router();
+
+// Notes belong to whoever is signed in. A request for the personal notes (x-personal) also needs the
+// Personal Vault to have been unlocked; the owner is the signed-in person, never a header's claim.
+router.use(verifyToken);
+router.use((req, res, next) => (req.headers['x-personal'] === 'true' ? requireVault(req, res, next) : next()));
 
 router.get('/', async (req, res) => {
   try {

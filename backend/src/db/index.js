@@ -98,6 +98,30 @@ db.serialize(() => {
     )
   `);
 
+  // One row per signed-in browser or phone. A sign-in is only valid while its row is here, unrevoked
+  // and unexpired, which is what lets an administrator (or the person) end it on the spot.
+  // Refresh tokens are stored as SHA-256 hashes, never as the token itself; the previous hash is kept
+  // for a short while so a token that has just been replaced can be told apart from a stolen one.
+  // Times are epoch seconds.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      device_id TEXT,
+      refresh_hash TEXT NOT NULL,
+      prev_refresh_hash TEXT,
+      rotated_at INTEGER,
+      created_at INTEGER NOT NULL,
+      last_used_at INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL,
+      ip TEXT,
+      user_agent TEXT,
+      revoked_at INTEGER,
+      revoked_reason TEXT
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)`);
+
   // Runs once — each table is only backfilled while it's still empty, so this is a no-op on
   // every boot after the first successful migration. The source JSON files are left in place
   // afterward, untouched, as a rollback safety net.

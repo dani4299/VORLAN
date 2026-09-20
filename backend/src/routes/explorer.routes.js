@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
-const verifyToken = require('../middleware/auth.middleware');
+const { verifyToken, verifyTokenOrFileCookie } = require('../middleware/auth.middleware');
 const explorer = require('../services/explorer.service');
 const jobQueue = require('../services/jobQueue.service');
 
@@ -61,7 +61,8 @@ router.get('/search', verifyToken, handle((req, res) => {
   res.json({ results: q ? explorer.search(q) : [] });
 }));
 
-router.get('/download', verifyToken, handle((req, res) => {
+// Opened in a new tab by the Files page, so it can't send an Authorization header: the sign-in's file cookie is accepted here.
+router.get('/download', verifyTokenOrFileCookie, handle((req, res) => {
   const full = explorer.safeResolve(req.query.path || '');
   res.download(full);
 }));

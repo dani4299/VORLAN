@@ -6,7 +6,7 @@ const QRCode = require('qrcode');
 const verifyToken = require('../middleware/auth.middleware');
 const storage = require('../services/storage.service');
 const { getLocalIp } = require('../utils/localIp');
-const { PORT } = require('../config/constants');
+const { PORT, HTTPS_PORT, TLS_ENABLED } = require('../config/constants');
 const { FRONTEND_INDEX_HTML } = require('../config/paths');
 
 const router = express.Router();
@@ -18,8 +18,11 @@ const DEV_FRONTEND_PORT = 5173;
 
 router.get('/connect-qr', verifyToken, async (req, res) => {
   try {
-    const port = fs.existsSync(FRONTEND_INDEX_HTML) ? PORT : DEV_FRONTEND_PORT;
-    const url = `http://${getLocalIp()}:${port}`;
+    // An installed copy is reached over HTTPS when that is on (the plain address only redirects to it);
+    // the dev server is plain HTTP and isn't part of an installed setup.
+    const installed = fs.existsSync(FRONTEND_INDEX_HTML);
+    const ip = getLocalIp();
+    const url = !installed ? `http://${ip}:${DEV_FRONTEND_PORT}` : TLS_ENABLED ? `https://${ip}:${HTTPS_PORT}` : `http://${ip}:${PORT}`;
     const qr = await QRCode.toDataURL(url);
     res.json({ url, qr });
   } catch (err) {

@@ -1,7 +1,8 @@
 const db = require('../db');
+const eventBus = require('./eventBus.service');
 
-/** Fire-and-forget by design — a logging failure should never break the action being logged. */
-const log = (actorUsername, action, detail = null) => {
+/** Writes one entry. The audit.record listener calls this; nothing else should need to. */
+const record = (actorUsername, action, detail = null) => {
   db.run(
     'INSERT INTO audit_log (actor_username, action, detail, created_at) VALUES (?, ?, ?, ?)',
     [actorUsername || null, action, detail, new Date().toISOString()],
@@ -9,6 +10,17 @@ const log = (actorUsername, action, detail = null) => {
       if (err) console.error('Failed to write audit log entry:', err.message);
     }
   );
+};
+
+/**
+ * Reports something worth keeping a record of (a sign-in, a revoked session). It is published on the
+ * event bus and written by the audit listener, so what happened stays separate from how it is stored.
+ * Fire-and-forget by design - a logging failure should never break the action being logged. Where no
+ * listener is registered (a script using the services on their own) it is written directly instead.
+ */
+const log = (actorUsername, action, detail = null) => {
+  if (eventBus.hasListeners('audit.record')) eventBus.emit('audit.record', { actor: actorUsername, action, detail });
+  else record(actorUsername, action, detail);
 };
 
 // An action is named `category.what_happened`, so a category filter is a prefix match.
@@ -47,4 +59,4 @@ const list = ({ limit = 100, category, search, beforeId } = {}) => new Promise((
   });
 });
 
-module.exports = { log, list, CATEGORIES };
+module.exports = { log, record, list, CATEGORIES };

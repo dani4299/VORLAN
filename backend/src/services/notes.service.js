@@ -1,10 +1,7 @@
 const db = require('../db');
 
-/** Resolves which pool (global, or a user's private pool) a request targets. */
-const getOwner = (req) => {
-  const isPersonal = req.headers['x-personal'] === 'true';
-  return isPersonal ? (req.headers['x-username'] || 'Ghost') : null;
-};
+/** Resolves which pool (global, or the signed-in person's private pool) a request targets. The routes have already checked the vault is unlocked. */
+const getOwner = (req) => (req.headers['x-personal'] === 'true' ? req.user.username : null);
 
 const rowToNote = (r) => ({ id: r.id, title: r.title, text: r.text, timestamp: r.timestamp });
 

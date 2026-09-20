@@ -10,6 +10,7 @@ const systemInfo = require('../services/systemInfo.service');
 const { getDiskUsage } = require('../services/storage.service');
 const usersService = require('../services/users.service');
 const adminSystem = require('../services/adminSystem.service');
+const sessions = require('../services/sessions.service');
 
 const router = express.Router();
 
@@ -87,8 +88,8 @@ router.post('/users', async (req, res) => {
 router.post('/users/:id/password', async (req, res) => {
   try {
     const target = await usersService.resetPassword(idParam(req), req.body?.password);
-    auditLog.log(req.user.username, 'admin.password_reset', target.username);
-    res.json({ message: 'Password changed.' });
+    auditLog.log(req.user.username, 'admin.password_reset', `${target.username}: ${target.signedOut} sign-in${target.signedOut === 1 ? '' : 's'} ended`);
+    res.json({ message: 'Password changed.', signedOut: target.signedOut });
   } catch (err) {
     sendError(res, err, 'Failed to change the password.');
   }
@@ -101,6 +102,52 @@ router.delete('/users/:id', async (req, res) => {
     res.json({ message: 'Account deleted.' });
   } catch (err) {
     sendError(res, err, 'Failed to delete the account.');
+  }
+});
+
+// ---- sign-ins: every live one, and ending them
+
+router.get('/sessions', async (req, res) => {
+  try {
+    res.json({ sessions: (await sessions.listAll()).map((s) => ({ ...s, current: s.id === req.user.sid })) });
+  } catch (err) {
+    sendError(res, err, 'Failed to load sign-ins.');
+  }
+});
+
+router.delete('/sessions/:id', async (req, res) => {
+  try {
+    const target = await sessions.find(req.params.id);
+    if (!target || !(await sessions.revoke(target.id, 'ended by an administrator'))) return res.status(404).json({ error: 'That sign-in has already ended.' });
+    auditLog.log(req.user.username, 'admin.session_revoked', `${target.username}${target.device_id ? `, device ${target.device_id}` : ''}`);
+    res.json({ message: 'Signed out.' });
+  } catch (err) {
+    sendError(res, err, 'Failed to end that sign-in.');
+  }
+});
+
+// Ends every sign-in one account has (the caller's own current one is spared, so this can't lock you out of the window you're using).
+router.delete('/users/:id/sessions', async (req, res) => {
+  try {
+    const target = await new Promise((resolve, reject) => db.get('SELECT id, username FROM users WHERE id = ?', [idParam(req)], (err, row) => (err ? reject(err) : resolve(row))));
+    if (!target) return res.status(404).json({ error: 'That account no longer exists.' });
+    const ended = await sessions.revokeForUser(target.id, { exceptSessionId: target.id === req.user.id ? req.user.sid : null, reason: 'ended by an administrator' });
+    auditLog.log(req.user.username, 'admin.user_signed_out', `${target.username}: ${ended} sign-in${ended === 1 ? '' : 's'} ended`);
+    res.json({ message: 'Signed out.', ended });
+  } catch (err) {
+    sendError(res, err, 'Failed to sign that account out.');
+  }
+});
+
+router.delete('/devices/:userId/:deviceId/sessions', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    const ended = await sessions.revokeForDevice(userId, req.params.deviceId);
+    if (!ended) return res.status(404).json({ error: 'That device has no active sign-in.' });
+    auditLog.log(req.user.username, 'admin.device_signed_out', `user #${userId}, device ${req.params.deviceId}`);
+    res.json({ message: 'Signed out.', ended });
+  } catch (err) {
+    sendError(res, err, 'Failed to sign that device out.');
   }
 });
 
@@ -203,6 +250,14 @@ router.get('/system/network', async (req, res) => {
     res.json(await adminSystem.getNetwork());
   } catch (err) {
     sendError(res, err, 'Failed to load network information.');
+  }
+});
+
+router.get('/system/security', async (req, res) => {
+  try {
+    res.json(await adminSystem.getSecurity());
+  } catch (err) {
+    sendError(res, err, 'Failed to load security information.');
   }
 });
 

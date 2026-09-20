@@ -19,6 +19,7 @@
     "multer": "^2.2.0",
     "node-media-server": "^4.2.8",
     "qrcode": "^1.5.4",
+    "selfsigned": "^5.5.0",
     "sqlite3": "^6.0.1",
     "systeminformation": "^5.33.8"
   }
