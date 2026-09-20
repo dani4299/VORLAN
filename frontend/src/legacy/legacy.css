@@ -1,0 +1,38 @@
+/* Styles the original user dashboard (src/legacy) needs and the current design system no longer ships.
+   Loaded only when that dashboard is, so nothing here can reach the current UI. */
+
+@layer components {
+  /* Theme-reactive icon chip. */
+  .chip {
+    background: var(--overlay-2);
+    border: 1px solid var(--overlay-3);
+  }
+
+  /* Always a translucent white chip, regardless of theme - for controls floating on a wallpaper image. */
+  .icon-btn-overlay {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .icon-btn-overlay:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  .icon-btn-overlay-hover:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  /* Dark-icon counterpart, for controls floating on a wallpaper bright enough to need dark icons. */
+  .icon-btn-overlay-dark {
+    background: rgba(15, 17, 21, 0.07);
+  }
+  .icon-btn-overlay-dark:hover {
+    background: rgba(15, 17, 21, 0.14);
+  }
+  .icon-btn-overlay-hover-dark:hover {
+    background: rgba(15, 17, 21, 0.07);
+  }
+
+  .animate-sheet-up {
+    animation: fade-in 0.15s ease-out;
+  }
+  .animate-tile-wiggle {
+    animation: none;
+  }
+}
