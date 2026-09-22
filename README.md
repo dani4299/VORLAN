@@ -95,7 +95,11 @@ Administrators land on a desktop. Every tool is a window: open several, arrange 
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/resource-monitor.png" alt="Resource Monitor showing 24 hours of processor, memory and network charts"><br><b>Resource Monitor.</b> Live charts for processor, memory, network and disk, or the last hour, 6 hours, 24 hours, 7 days or 30 days. Readable with the keyboard, with a spoken summary for screen readers.</td>
-    <td width="50%"><img src="docs/screenshots/storage-manager.png" alt="Storage Manager listing volumes and how much space each VORLAN folder uses"><br><b>Storage Manager.</b> Every volume the computer can see, and how much of VORLAN's data lives in Documents, Uploads, Pictures, Music, shared media, personal vaults and the database.</td>
+    <td width="50%"><img src="docs/screenshots/storage-manager.png" alt="Storage Manager listing volumes, pool disks, per-dataset quotas and which datasets are shared over SMB or NFS"><br><b>Storage Manager.</b> Volumes, the auto-formed pool, and per-dataset quotas, snapshots and a <b>Shared</b> column showing which datasets are exported over SMB or NFS.</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/storage-sharing.png" alt="A dataset's Network sharing panel with SMB and NFS toggles on and the exact connection address shown"><br><b>Turn on a network share.</b> One switch per protocol, right in the dataset's own settings - the exact <code>\\host\share</code> or <code>mount host:/path</code> to use appears the moment it's on.</td>
+    <td width="50%"><img src="docs/screenshots/app-store.png" alt="App Store catalog with Nextcloud, Pi-hole, Minecraft server and Jellyfin, each with an Install button"><br><b>App Store.</b> Install real self-hosted apps as Docker containers - a small curated catalog, or any image you point it at.</td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/control-panel.png" alt="Control Panel accounts list"><br><b>Control Panel: accounts.</b> Create accounts, change roles, reset passwords, sign an account out everywhere, or delete it with a typed confirmation.</td>
@@ -107,11 +111,14 @@ Administrators land on a desktop. Every tool is a window: open several, arrange 
   </tr>
 </table>
 
-The desktop also has **Task Manager** (running and finished tasks such as file copies), **Services** (API, database, metrics sampler and the assistant, with health and counters) and **Network** (interfaces, live traffic and the addresses other devices should use).
+The desktop also has **Task Manager** (running and finished tasks such as file copies) and **Network** (interfaces, live traffic and the addresses other devices should use). **Services** shows every core service's health, including VORLAN's own - restartable or stoppable right there on an install that runs it as a background service.
 
-<p align="center">
-  <img src="docs/screenshots/network.png" alt="Network window listing the HTTPS address other devices should open" width="720">
-</p>
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/services.png" alt="Services window showing the VORLAN API managed by systemd, with Restart and Stop buttons"><br><b>Services.</b> State, uptime and request counters for every core service - Restart/Stop VORLAN itself without a terminal.</td>
+    <td width="50%"><img src="docs/screenshots/network.png" alt="Network window listing the HTTPS address other devices should open"><br><b>Network.</b> Interfaces, live traffic, and the address to type into another device's browser.</td>
+  </tr>
+</table>
 
 ### Everyone else
 
