@@ -179,6 +179,29 @@ db.serialize(() => {
   `);
   db.run(`CREATE INDEX IF NOT EXISTS idx_dataset_snapshots_key ON dataset_snapshots(dataset_key)`);
 
+  // One row per installed app (a Docker container VORLAN manages). `container_id` is set once Docker
+  // has actually created it - null while a fresh install is still pulling the image. `ports` and
+  // `volumes` are JSON arrays; `env` is a JSON object. Status mirrors the container's own state plus
+  // the install/uninstall states Docker itself has no concept of.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS apps (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      catalog_key TEXT,
+      image TEXT NOT NULL,
+      ports TEXT NOT NULL,
+      volumes TEXT NOT NULL,
+      env TEXT NOT NULL DEFAULT '{}',
+      container_id TEXT,
+      status TEXT NOT NULL CHECK(status IN ('installing', 'running', 'stopped', 'error', 'uninstalling')),
+      error_message TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `);
+
   // Runs once — each table is only backfilled while it's still empty, so this is a no-op on
   // every boot after the first successful migration. The source JSON files are left in place
   // afterward, untouched, as a rollback safety net.

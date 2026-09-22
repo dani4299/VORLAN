@@ -14,6 +14,8 @@ const EXPLORER_DIR = path.join(SECURE_VAULT_DIR, 'explorer');
 // not inside, the folders it copies - so a snapshot of Documents never shows up as a folder inside
 // Documents itself, and the storage scan below can skip it by name instead of by walking into it.
 const SNAPSHOTS_DIR = path.join(SECURE_VAULT_DIR, '.snapshots');
+// Where an installed app's own persistent data lives, one subfolder per app, bind-mounted into its container.
+const APPS_DIR = path.join(SECURE_VAULT_DIR, 'apps');
 
 module.exports = {
   ROOT_DIR,
@@ -22,6 +24,7 @@ module.exports = {
   PERSONAL_VAULT_DIR,
   EXPLORER_DIR,
   SNAPSHOTS_DIR,
+  APPS_DIR,
   NOTES_FILE: path.join(SECURE_VAULT_DIR, 'notes_matrix.json'),
   PROFILES_FILE: path.join(ROOT_DIR, 'profiles.json'),
   HISTORY_FILE: path.join(ROOT_DIR, 'ai_history.json'),

@@ -5,7 +5,7 @@ const https = require('https');
 const path = require('path');
 const fs = require('fs');
 const { PORT, HTTPS_PORT, TLS_ENABLED } = require('./src/config/constants');
-const { GLOBAL_MEDIA_DIR, FRONTEND_DIST_DIR, FRONTEND_INDEX_HTML } = require('./src/config/paths');
+const { GLOBAL_MEDIA_DIR, APPS_DIR, FRONTEND_DIST_DIR, FRONTEND_INDEX_HTML } = require('./src/config/paths');
 const secrets = require('./src/config/secrets');
 const { getLocalIp } = require('./src/utils/localIp');
 const { httpsRedirectTarget } = require('./src/utils/transport');
@@ -25,6 +25,7 @@ const systemRoutes = require('./src/routes/system.routes');
 const explorerRoutes = require('./src/routes/explorer.routes');
 const devicesRoutes = require('./src/routes/devices.routes');
 const adminRoutes = require('./src/routes/admin.routes');
+const appsRoutes = require('./src/routes/apps.routes');
 const mediaRoutes = require('./src/routes/media.routes');
 const requestEvents = require('./src/middleware/requestEvents.middleware');
 const securityHeaders = require('./src/middleware/securityHeaders.middleware');
@@ -52,6 +53,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Shared and personal files: signed-in people only (see media.routes.js).
 if (!fs.existsSync(GLOBAL_MEDIA_DIR)) fs.mkdirSync(GLOBAL_MEDIA_DIR, { recursive: true });
+if (!fs.existsSync(APPS_DIR)) fs.mkdirSync(APPS_DIR, { recursive: true });
 app.use('/media', mediaRoutes);
 
 // API routes
@@ -68,6 +70,7 @@ app.use('/api/system', systemRoutes);
 app.use('/api/explorer', explorerRoutes);
 app.use('/api/devices', devicesRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/apps', appsRoutes);
 
 // Serves the frontend's production build when one exists (an installed copy of VORLAN) - a plain
 // dev checkout with no build present skips this entirely, so `npm start`'s Vite dev server

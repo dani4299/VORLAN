@@ -38,6 +38,7 @@ backend/secure_vault/personal/
 backend/secure_vault/media/
 backend/secure_vault/explorer/
 backend/secure_vault/.snapshots/
+backend/secure_vault/apps/
 backend/hotspot_config.json
 backend/devices.json
 
