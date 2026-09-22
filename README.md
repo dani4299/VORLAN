@@ -7,7 +7,7 @@ VORLAN runs on your own machine: sign-in, file storage, a private vault, system 
 Administrators get a desktop of windows for running the box (accounts, devices, live and 30-day charts, storage, tasks, logs, network, support). Everyone else gets a calm, fast app for their files, notes, pictures, music and assistant, and phones and tablets get a touch-first dashboard of their own.
 
 <p align="center">
-  <img src="docs/screenshots/admin-desktop.png" alt="The VORLAN administrator desktop with the Resource Monitor and Control Panel windows open" width="900">
+  <img src="docs/screenshots/user-home.png" alt="A signed-in user's VORLAN home page: clock, greeting, app tiles and storage/memory/CPU/uptime widgets" width="900">
 </p>
 
 ---
@@ -91,6 +91,10 @@ Any of the five shareable datasets (everything except Personal vaults, which sta
 ### The administrator desktop
 
 Administrators land on a desktop. Every tool is a window: open several, arrange them, and the layout is remembered next time.
+
+<p align="center">
+  <img src="docs/screenshots/admin-desktop.png" alt="The VORLAN administrator desktop with the Resource Monitor and Control Panel windows open" width="900">
+</p>
 
 <table>
   <tr>

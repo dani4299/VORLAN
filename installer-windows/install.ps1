@@ -7,6 +7,10 @@ Docker Desktop for the App Store), fetches/updates VORLAN itself, builds it, the
 shortcut and a Start Menu entry - the Windows counterpart of installer/install.sh on Linux.
 Re-running is safe: every step checks first and skips what's already there.
 
+This file is also published as a standalone download (a GitHub Release asset), so it can't assume
+its lib/ siblings are sitting next to it - if they're not found, it clones the repo to get them
+and re-invokes itself from inside that clone, where they exist. Same pattern as installer/install.sh.
+
 Usage:
     powershell -ExecutionPolicy Bypass -File install.ps1
     powershell -ExecutionPolicy Bypass -File install.ps1 -InstallDir "D:\Apps\VORLAN"
@@ -17,6 +21,20 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+if (-not (Test-Path (Join-Path $ScriptDir "lib\steps.ps1"))) {
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        Write-Host "git is required to run this installer (it fetches VORLAN's install scripts). Please install git and try again." -ForegroundColor Red
+        exit 1
+    }
+    $bootstrapDir = Join-Path ([System.IO.Path]::GetTempPath()) ("vorlan-install-" + [System.Guid]::NewGuid().ToString("N").Substring(0, 8))
+    Write-Host "Fetching installer files..."
+    git clone --quiet "https://github.com/dani4299/VORLAN.git" $bootstrapDir
+    if ($LASTEXITCODE -ne 0) { Write-Host "Could not fetch VORLAN's installer files." -ForegroundColor Red; exit 1 }
+    & (Join-Path $bootstrapDir "installer-windows\install.ps1") -InstallDir $InstallDir
+    exit $LASTEXITCODE
+}
+
 . (Join-Path $ScriptDir "lib\steps.ps1")
 
 function Write-Step($Message) { Write-Host "==> $Message" -ForegroundColor Cyan }
