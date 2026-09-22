@@ -49,6 +49,8 @@ ui_detect_backend || fail "Could not find or install a dialog tool (zenity/kdial
 
 ui_message "Welcome to VORLAN" "This installs VORLAN and everything it needs: Node.js, Ollama (with the phi3 model), Docker (for the App Store), and linux-wifi-hotspot for phone/tablet access via a WiFi hotspot.
 
+VORLAN itself runs as a background service, started now and again automatically every time this computer starts - no need to keep a terminal or the application menu shortcut open.
+
 Click OK to continue."
 
 DEFAULT_SSID="VORLAN-$(hostname)"
@@ -87,6 +89,10 @@ step_clone_or_update_vorlan "$INSTALL_DIR" >> "$LOG_FILE" 2>&1 || { ui_progress_
 ui_progress_update 85 "Building VORLAN..."
 step_build_vorlan "$INSTALL_DIR" >> "$LOG_FILE" 2>&1 || { ui_progress_done; fail "Building VORLAN failed."; }
 
+ui_progress_update 90 "Setting up VORLAN's background service..."
+step_write_systemd_service "$INSTALL_DIR" "$SCRIPT_DIR/systemd/vorlan.service.template" >> "$LOG_FILE" 2>&1 || { ui_progress_done; fail "Writing VORLAN's systemd service failed."; }
+step_enable_systemd_service >> "$LOG_FILE" 2>&1 || { ui_progress_done; fail "Starting VORLAN's background service failed."; }
+
 ui_progress_update 95 "Adding VORLAN to your application menu..."
 mkdir -p "$HOME/.local/share/applications"
 sed "s|__INSTALL_DIR__|$INSTALL_DIR|g" "$SCRIPT_DIR/desktop/launch.sh.template" > "$INSTALL_DIR/launch.sh"
@@ -96,7 +102,7 @@ sed "s|__INSTALL_DIR__|$INSTALL_DIR|g" "$SCRIPT_DIR/desktop/vorlan.desktop.templ
 ui_progress_update 100 "Done!"
 ui_progress_done
 
-if ui_confirm "VORLAN Installed" "VORLAN is installed and added to your application menu.
+if ui_confirm "VORLAN Installed" "VORLAN is installed and added to your application menu. It's already running as a background service and will keep starting automatically every time this computer boots.
 
 WiFi network name: $SSID
 WiFi password: $PASSWORD

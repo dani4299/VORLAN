@@ -35,7 +35,11 @@ export const listSnapshots = (key) => get(`/admin/storage/datasets/${key}/snapsh
 export const takeSnapshot = (key) => api.post(`/admin/storage/datasets/${key}/snapshots`, {}, { headers: authHeaders() }).then((r) => r.data.snapshot);
 export const deleteSnapshot = (id) => api.delete(`/admin/storage/snapshots/${id}`, { headers: authHeaders() });
 export const restoreSnapshot = (id) => api.post(`/admin/storage/snapshots/${id}/restore`, {}, { headers: authHeaders() }).then((r) => r.data);
+export const getSharing = () => get('/admin/storage/sharing');
+export const setDatasetSharing = (key, changes) => api.patch(`/admin/storage/datasets/${key}/sharing`, changes, { headers: authHeaders() }).then((r) => r.data.share);
 export const getServices = () => get('/admin/system/services');
+export const restartVorlan = () => api.post('/admin/system/services/vorlan/restart', {}, { headers: authHeaders() }).then((r) => r.data);
+export const stopVorlan = () => api.post('/admin/system/services/vorlan/stop', {}, { headers: authHeaders() }).then((r) => r.data);
 export const getNetwork = () => get('/admin/system/network');
 export const getSecurity = () => get('/admin/system/security');
 export const getAbout = () => get('/admin/system/about');

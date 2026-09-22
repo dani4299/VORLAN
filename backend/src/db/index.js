@@ -202,6 +202,19 @@ db.serialize(() => {
     )
   `);
 
+  // Whether a dataset is exported over SMB and/or NFS (Phase 7). Rows only exist for datasets that
+  // are actually shareable — see SHAREABLE_KEYS in sharing.service.js, which deliberately excludes
+  // "personal" (each user's PIN-locked vault would otherwise be readable by any other VORLAN
+  // account signed in over SMB, since sharing has no concept of VORLAN's own per-file PIN gate).
+  db.run(`
+    CREATE TABLE IF NOT EXISTS dataset_shares (
+      dataset_key TEXT PRIMARY KEY,
+      smb_enabled INTEGER NOT NULL DEFAULT 0,
+      nfs_enabled INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT
+    )
+  `);
+
   // Runs once — each table is only backfilled while it's still empty, so this is a no-op on
   // every boot after the first successful migration. The source JSON files are left in place
   // afterward, untouched, as a rollback safety net.

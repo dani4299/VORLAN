@@ -1,0 +1,24 @@
+[
+  {
+    "date": "2026-09-19",
+    "macrostructure": "Marquee Hero (home) / Index-First (services) / Workbench (VORLAN) / Long Document (about)",
+    "theme": "studied-DNA",
+    "source": "https://styles.refero.design/style/6b667ffc-5158-4000-9252-3a107d5161ee",
+    "theme_axes": "light / geometric-sans / neutral",
+    "enrichment": "CSS gradient sphere + rings (Tier A)",
+    "nav": "N1a + mobile sheet",
+    "footer": "email-first statement",
+    "brief": "DSRF Softech Studios v2 · Refero OFF+BRAND style, longer home, careers, animation"
+  },
+  {
+    "date": "2026-09-19",
+    "macrostructure": "Split Studio (home, services) / Workbench (VORLAN) / Long Document (about)",
+    "theme": "custom",
+    "theme_axes": "light / geometric-sans / warm",
+    "vibe": "utilitarian, warm neutral, brand red",
+    "enrichment": "none (photography + real product captures)",
+    "nav": "N1b",
+    "footer": "Ft2",
+    "brief": "DSRF Softech Studios · software studio site with VORLAN case study"
+  }
+]

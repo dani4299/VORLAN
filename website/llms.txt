@@ -1,0 +1,12 @@
+# DSRF Softech Studios
+> A small software studio, founded in 2025, that builds AI automation, custom software, websites, MVPs and self-hosted systems. It also makes VORLAN, an offline-first home server platform. Contact: info@dsrf.tech
+
+## Pages
+- [Services](https://www.dsrf.tech/services/): AI automation, custom software, websites and e-commerce, MVP development, website performance, self-hosted software.
+- [VORLAN](https://www.dsrf.tech/vorlan/): Case study of our self-hosted home server and network manager.
+- [About](https://www.dsrf.tech/about/): Who we are and what we value.
+- [Careers](https://www.dsrf.tech/careers/): Why work with us, benefits, and how to send your CV.
+- [Contact](https://www.dsrf.tech/contact/): Start a project.
+
+## Elsewhere
+- [LinkedIn](https://www.linkedin.com/company/dsrf/)

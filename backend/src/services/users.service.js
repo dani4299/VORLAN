@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const db = require('../db');
 const sessions = require('./sessions.service');
+const sharing = require('./sharing.service');
 const { usernameProblem } = require('../utils/safeName');
 
 const ROLES = ['admin', 'employee', 'guest'];
@@ -37,6 +38,7 @@ const createUser = async ({ username, password, email, fullName, role }) => {
       'INSERT INTO users (username, password, role, email, full_name, created_at) VALUES (?, ?, ?, ?, ?, ?)',
       [name, await bcrypt.hash(password, 10), role, mail, (fullName || '').trim() || null, new Date().toISOString()]
     );
+    sharing.syncSambaUser(name, password).catch(() => {});
     return { id: result.lastID, username: name, role };
   } catch (err) {
     if (err.message.includes('UNIQUE constraint failed: users.username')) throw problem(409, 'That username is already taken.');
@@ -50,6 +52,7 @@ const resetPassword = async (id, password) => {
   const target = await get('SELECT id, username FROM users WHERE id = ?', [id]);
   if (!target) throw problem(404, 'That account no longer exists.');
   await run('UPDATE users SET password = ? WHERE id = ?', [await bcrypt.hash(password, 10), id]);
+  sharing.syncSambaUser(target.username, password).catch(() => {});
   // Whoever was signed in with the old password is signed out: that is usually the reason for a reset.
   const signedOut = await sessions.revokeForUser(id, { reason: 'password reset by an administrator' });
   return { ...target, signedOut };
@@ -71,6 +74,7 @@ const deleteUser = async (id, actorId) => {
 
   // The account row goes first: from that moment its sign-ins stop working, even if a later cleanup step fails.
   await run('DELETE FROM users WHERE id = ?', [id]);
+  sharing.removeSambaUser(target.username).catch(() => {});
   await Promise.all([
     run('DELETE FROM profiles WHERE username = ?', [target.username]),
     run('DELETE FROM notes WHERE owner_username = ?', [target.username]),

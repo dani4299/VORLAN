@@ -20,6 +20,8 @@ const jobQueue = require('./jobQueue.service');
 const requestStats = require('./requestStats.service');
 const auditLog = require('./auditLog.service');
 const storagePools = require('./storagePools.service');
+const systemdControl = require('./systemdControl.service');
+const sharing = require('./sharing.service');
 
 // Maps a scanStorage() location id to the dataset key that manages its quota and snapshots (see
 // storagePools.service.js). A location with no entry here (loose files, the database) isn't a dataset.
@@ -118,8 +120,9 @@ const scanStorage = async () => {
 
 /** Volumes are live; the folder scan is cached for 30 seconds, and concurrent callers share one scan. */
 const getStorage = async () => {
-  const [info, datasets, pools, availableDisks] = await Promise.all([
+  const [info, datasets, pools, availableDisks, shareStatus, shares] = await Promise.all([
     systemInfo.getInfo(), storagePools.listDatasets(), storagePools.listPools(), storagePools.listAvailableDisks(),
+    sharing.ping(), sharing.listShares(),
   ]);
   if (!storageCache || Date.now() - storageCache.at > STORAGE_TTL_MS) {
     storagePending = storagePending || scanStorage().finally(() => { storagePending = null; });
@@ -127,6 +130,7 @@ const getStorage = async () => {
   }
 
   const datasetByKey = Object.fromEntries(datasets.map((d) => [d.key, d]));
+  const shareByKey = Object.fromEntries(shares.map((s) => [s.key, s]));
   const locations = storageCache.value.locations.map((l) => {
     const datasetKey = LOCATION_TO_DATASET[l.id];
     const dataset = datasetKey && datasetByKey[datasetKey];
@@ -139,11 +143,15 @@ const getStorage = async () => {
       snapshotsEnabled: dataset.snapshotsEnabled,
       snapshotFrequency: dataset.snapshotFrequency,
       snapshotRetain: dataset.snapshotRetain,
+      shareable: sharing.SHAREABLE_KEYS.includes(datasetKey),
+      smbEnabled: shareByKey[datasetKey]?.smbEnabled ?? false,
+      nfsEnabled: shareByKey[datasetKey]?.nfsEnabled ?? false,
     };
   });
 
   return {
     volumes: info.disks, dataVolume: hostVolume(info.disks), pools, availableDisks,
+    sharingAvailable: shareStatus.available, sharingUnavailableReason: shareStatus.reason,
     ...storageCache.value, locations,
   };
 };
@@ -151,7 +159,7 @@ const getStorage = async () => {
 // ---------------------------------------------------------------- services
 
 const getServices = async () => {
-  const [info, ollama, sampler, users, devices, notes, auditEntries] = await Promise.all([
+  const [info, ollama, sampler, users, devices, notes, auditEntries, systemd] = await Promise.all([
     systemInfo.getInfo(),
     systemInfo.checkOllama(),
     metrics.getStatus(),
@@ -159,6 +167,7 @@ const getServices = async () => {
     count('SELECT COUNT(*) AS n FROM devices'),
     count('SELECT COUNT(*) AS n FROM notes'),
     count('SELECT COUNT(*) AS n FROM audit_log'),
+    systemdControl.getStatus(),
   ]);
   const mem = process.memoryUsage();
   const req = requestStats.snapshot();
@@ -171,6 +180,7 @@ const getServices = async () => {
     services: [
       {
         id: 'api', name: 'VORLAN API', status: 'running', summary: `Listening on port ${PORT}`,
+        controllable: systemd.available,
         details: [
           { label: 'Process ID', value: process.pid },
           { label: 'Port', value: PORT },
@@ -181,6 +191,12 @@ const getServices = async () => {
           { label: 'Server errors (5xx)', value: req.serverErrors, kind: 'number' },
           { label: 'Average response time', value: req.averageMs, kind: 'ms' },
           { label: 'Slowest response', value: req.slowestMs, kind: 'ms' },
+          ...(systemd.available ? [
+            { label: 'Managed by', value: 'systemd (user service, restarts on crash)' },
+            { label: 'Service state', value: systemd.state },
+            { label: 'Running since', value: systemd.since, kind: 'time' },
+            { label: 'Restarts since boot', value: systemd.restarts, kind: 'number' },
+          ] : []),
         ],
       },
       {

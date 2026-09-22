@@ -1,0 +1,21 @@
+{
+  "name": "DSRF Softech Studios",
+  "short_name": "DSRF",
+  "description": "AI automation and custom software studio.",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#e5e4e0",
+  "theme_color": "#1d1d1d",
+  "icons": [
+    {
+      "src": "/assets/logo/dsrf-logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/logo/dsrf-logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

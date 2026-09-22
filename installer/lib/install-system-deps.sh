@@ -46,6 +46,51 @@ else
   step_add_user_to_docker_group "$USERNAME" || { echo "STEP_FAILED: could not add $USERNAME to the docker group" >&2; exit 1; }
 fi
 
+if step_linger_enabled "$USERNAME"; then
+  echo "STEP_OK: $USERNAME already starts services at boot without logging in"
+else
+  echo "STEP_START: Letting $USERNAME's VORLAN service start at boot"
+  step_enable_linger "$USERNAME" || { echo "STEP_FAILED: could not enable lingering for $USERNAME" >&2; exit 1; }
+fi
+
+if step_check_samba; then
+  echo "STEP_OK: Samba already installed"
+else
+  echo "STEP_START: Installing Samba (for SMB shares)"
+  step_install_samba || { echo "STEP_FAILED: Samba install failed" >&2; exit 1; }
+fi
+
+if step_check_nfs; then
+  echo "STEP_OK: NFS already installed"
+else
+  echo "STEP_START: Installing NFS (for NFS shares)"
+  step_install_nfs || { echo "STEP_FAILED: NFS install failed" >&2; exit 1; }
+fi
+
+if step_samba_shares_conf_ready; then
+  echo "STEP_OK: Samba is already set up for VORLAN to manage shares"
+else
+  echo "STEP_START: Setting up Samba for VORLAN"
+  step_setup_samba_shares_conf "$USERNAME" || { echo "STEP_FAILED: could not set up Samba's config" >&2; exit 1; }
+fi
+
+if step_nfs_exports_ready; then
+  echo "STEP_OK: NFS is already set up for VORLAN to manage shares"
+else
+  echo "STEP_START: Setting up NFS for VORLAN"
+  step_setup_nfs_exports "$USERNAME" || { echo "STEP_FAILED: could not set up NFS exports" >&2; exit 1; }
+fi
+
+if step_sharing_sudoers_ready; then
+  echo "STEP_OK: $USERNAME can already manage shares without a password prompt"
+else
+  echo "STEP_START: Letting $USERNAME manage SMB/NFS shares"
+  step_write_sharing_sudoers "$USERNAME" || { echo "STEP_FAILED: could not write the sharing sudoers rule" >&2; exit 1; }
+fi
+
+echo "STEP_START: Starting Samba and NFS"
+step_enable_sharing_services || { echo "STEP_FAILED: could not enable/start Samba or NFS" >&2; exit 1; }
+
 if step_check_hotspot_tool; then
   echo "STEP_OK: linux-wifi-hotspot already installed"
 else

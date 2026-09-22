@@ -1,4 +1,5 @@
 const express = require('express');
+const os = require('os');
 const db = require('../db');
 const verifyToken = require('../middleware/auth.middleware');
 const requireAdmin = require('../middleware/requireAdmin.middleware');
@@ -13,6 +14,9 @@ const adminSystem = require('../services/adminSystem.service');
 const sessions = require('../services/sessions.service');
 const storagePools = require('../services/storagePools.service');
 const snapshots = require('../services/snapshots.service');
+const systemdControl = require('../services/systemdControl.service');
+const sharing = require('../services/sharing.service');
+const { getLocalIp } = require('../utils/localIp');
 
 const router = express.Router();
 
@@ -253,6 +257,28 @@ router.patch('/storage/datasets/:key', async (req, res) => {
   }
 });
 
+// ---- SMB/NFS sharing
+
+router.get('/storage/sharing', async (req, res) => {
+  try {
+    const status = await sharing.ping();
+    res.json({ ...status, host: getLocalIp(), hostname: os.hostname(), shares: await sharing.listShares() });
+  } catch (err) {
+    sendError(res, err, 'Failed to load sharing status.');
+  }
+});
+
+router.patch('/storage/datasets/:key/sharing', async (req, res) => {
+  try {
+    const { smbEnabled, nfsEnabled } = req.body || {};
+    const share = await sharing.setShare(req.params.key, { smbEnabled, nfsEnabled });
+    auditLog.log(req.user.username, 'admin.dataset_sharing_changed', `${req.params.key}: ${JSON.stringify(req.body)}`);
+    res.json({ message: 'Saved.', share });
+  } catch (err) {
+    sendError(res, err, 'Failed to update sharing for that dataset.');
+  }
+});
+
 router.get('/storage/datasets/:key/snapshots', async (req, res) => {
   try {
     res.json({ snapshots: await snapshots.listSnapshots(req.params.key) });
@@ -305,6 +331,25 @@ router.get('/system/services', async (req, res) => {
   } catch (err) {
     sendError(res, err, 'Failed to load services.');
   }
+});
+
+// Restarting/stopping VORLAN's own systemd unit kills the very process answering this request, so the
+// response is sent first and the actual systemctl call happens a moment later - the caller gets a
+// real answer instead of a connection that just drops.
+router.post('/system/services/vorlan/restart', async (req, res) => {
+  const status = await systemdControl.getStatus();
+  if (!status.available) return res.status(409).json({ error: "VORLAN isn't running as a systemd service on this install, so it can't be restarted from here." });
+  auditLog.log(req.user.username, 'admin.vorlan_restarted');
+  res.json({ message: 'Restarting.' });
+  setTimeout(() => systemdControl.restartSelf().catch((err) => console.error('Failed to restart via systemd:', err.message)), 300);
+});
+
+router.post('/system/services/vorlan/stop', async (req, res) => {
+  const status = await systemdControl.getStatus();
+  if (!status.available) return res.status(409).json({ error: "VORLAN isn't running as a systemd service on this install, so it can't be stopped from here." });
+  auditLog.log(req.user.username, 'admin.vorlan_stopped');
+  res.json({ message: 'Stopping.' });
+  setTimeout(() => systemdControl.stopSelf().catch((err) => console.error('Failed to stop via systemd:', err.message)), 300);
 });
 
 router.get('/system/network', async (req, res) => {

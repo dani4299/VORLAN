@@ -1,15 +1,15 @@
-import React, { useMemo, useState } from 'react';
-import { History, RotateCcw, Trash2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { History, RotateCcw, Share2, Trash2 } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge';
 import { Button, IconButton } from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { DataTable } from '../../components/ui/DataTable';
-import { SelectField, TextField } from '../../components/ui/Field';
+import { SelectField, Switch, TextField } from '../../components/ui/Field';
 import { Modal } from '../../components/ui/Modal';
 import { Spinner } from '../../components/ui/Spinner';
 import { useToast } from '../../context/ToastContext';
 import {
-  deleteSnapshot, errorMessage, listSnapshots, restoreSnapshot, takeSnapshot, updateDataset,
+  deleteSnapshot, errorMessage, getSharing, listSnapshots, restoreSnapshot, setDatasetSharing, takeSnapshot, updateDataset,
 } from '../../lib/adminApi';
 import { formatBytes, formatDateTime, formatNumber } from '../../lib/format';
 import { usePolling } from '../../lib/usePolling';
@@ -38,6 +38,29 @@ export const DatasetDialog = ({ location, onClose, onSaved }) => {
   const [takingSnapshot, setTakingSnapshot] = useState(false);
   const [pending, setPending] = useState(null); // { type: 'delete' | 'restore', snapshot }
   const [acting, setActing] = useState(false);
+
+  const [sharing, setSharing] = useState(null); // { available, reason, host, hostname, share: { path, smbEnabled, nfsEnabled } }
+  const [sharingBusy, setSharingBusy] = useState(null); // 'smb' | 'nfs' | null
+
+  useEffect(() => {
+    if (!location.shareable) return;
+    getSharing()
+      .then((res) => setSharing({ ...res, share: res.shares.find((s) => s.key === location.datasetKey) }))
+      .catch(() => setSharing({ available: false, reason: "Couldn't load sharing status." }));
+  }, [location.shareable, location.datasetKey]);
+
+  const toggleShare = async (protocol, on) => {
+    setSharingBusy(protocol);
+    try {
+      const share = await setDatasetSharing(location.datasetKey, protocol === 'smb' ? { smbEnabled: on } : { nfsEnabled: on });
+      setSharing((prev) => ({ ...prev, share }));
+      showToast(`${protocol === 'smb' ? 'SMB (Windows/Mac)' : 'NFS'} sharing turned ${on ? 'on' : 'off'} for ${location.label}.`, 'success');
+    } catch (err) {
+      showToast(errorMessage(err, "Couldn't change sharing for this dataset."), 'error');
+    } finally {
+      setSharingBusy(null);
+    }
+  };
 
   const retainProblem = retain !== '' && (!Number.isInteger(Number(retain)) || Number(retain) < 1 || Number(retain) > 60)
     ? 'Keep between 1 and 60.' : null;
@@ -153,6 +176,36 @@ export const DatasetDialog = ({ location, onClose, onSaved }) => {
             <Button type="submit" loading={saving} disabled={!!quotaProblem || !!retainProblem}>Save settings</Button>
           </div>
         </form>
+
+        <div className="space-y-3 mb-6 pb-6 border-b border-[var(--surface-border)]">
+          <h2 className="text-sm font-semibold text-[var(--ink)] flex items-center gap-1.5"><Share2 size={15} aria-hidden="true" />Network sharing</h2>
+          {!location.shareable ? (
+            <p className="text-sm text-[var(--ink-muted)]">
+              Personal vaults stay private. Each one is protected by its owner&rsquo;s own PIN, which a network share has no way to enforce, so this dataset is never shared.
+            </p>
+          ) : !sharing ? (
+            <div className="flex justify-center py-4"><Spinner label="Loading sharing status" /></div>
+          ) : !sharing.available ? (
+            <p className="text-sm text-[var(--ink-muted)]">{sharing.reason || 'Sharing is not available on this install.'}</p>
+          ) : (
+            <>
+              <Switch
+                label="Share over SMB (Windows, Mac)"
+                description={sharing.share?.smbEnabled ? `Connect to \\\\${sharing.host}\\${location.label} using any VORLAN account.` : 'Anyone with a VORLAN account can connect once this is on.'}
+                checked={!!sharing.share?.smbEnabled}
+                disabled={sharingBusy === 'smb'}
+                onChange={(on) => toggleShare('smb', on)}
+              />
+              <Switch
+                label="Share over NFS (Linux, other NAS clients)"
+                description={sharing.share?.nfsEnabled ? `Mount ${sharing.host}:${sharing.share.path}` : 'Open to any device on the local network - NFS has no sign-in of its own.'}
+                checked={!!sharing.share?.nfsEnabled}
+                disabled={sharingBusy === 'nfs'}
+                onChange={(on) => toggleShare('nfs', on)}
+              />
+            </>
+          )}
+        </div>
 
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-[var(--ink)] flex items-center gap-1.5"><History size={15} aria-hidden="true" />Snapshots</h2>

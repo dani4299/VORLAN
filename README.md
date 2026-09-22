@@ -29,14 +29,18 @@ Administrators get a desktop of windows for running the box (accounts, devices, 
 
 ## What's new
 
-VORLAN began as a sidebar with four pages. It has since been rebuilt in four steps, each of them a push to `main`:
+VORLAN began as a sidebar with four pages. It has since been rebuilt in a series of steps, each of them a push to `main`, following a roadmap modelled on TrueNAS - see [Roadmap](#roadmap) below.
 
 | Step | What it brought |
 |---|---|
 | **1. Backend foundation** | SQLite replaces the JSON files. Roles, an admin API, an audit log, a job queue, an event bus and a metrics sampler. |
 | **2. Original dashboard kept for touch devices** | The dashboard people already knew (wallpaper, big clock, coloured tiles) is preserved for phones and tablets. |
 | **3. New design system, admin desktop and new UI** | One flat, accessible design system. A windowed desktop for administrators. Every user page redesigned. |
-| **4. Security hardening** (latest) | HTTPS by default, a private per-install signing key, revocable sessions you can end from any device, brute-force limits, and files that finally require a sign-in. |
+| **4. Security hardening** | HTTPS by default, a private per-install signing key, revocable sessions you can end from any device, brute-force limits, and files that finally require a sign-in. |
+| **5. Storage engine** | Pools auto-formed from whatever disk holds your data, quotas and scheduled snapshots per dataset, all managed from **Storage Manager**. |
+| **6. App Store** | Install real self-hosted apps as Docker containers, from a small curated catalog or any image you point it at. |
+| **7. Background service lifecycle** | VORLAN runs as a systemd service that starts at boot and restarts itself if it crashes, controllable from **Services** or the terminal. |
+| **8. SMB and NFS sharing** (latest) | Turn any of the shared datasets into a Windows/Mac (SMB) or Linux/NAS-client (NFS) network share, right from **Storage Manager**. |
 
 ### 1. Backend foundation
 
@@ -63,6 +67,22 @@ Non-admin accounts on a touch device (or a window narrower than 1024 px) are sen
 ### 4. Security hardening
 
 See [Security](#security) for the details. In short: HTTPS by default; a private signing key generated for each install; 15-minute access tokens that renew quietly; a session per device that you (or an administrator) can end; wrong-password and wrong-PIN limits; and shared files, downloads and the Personal Vault served only to signed-in people. It also closes several holes found along the way, including unauthenticated `/media` and vault routes, wide-open CORS and a path-traversal in the delete routes.
+
+### 5. Storage engine
+
+A storage pool is formed automatically from whichever disk already holds your data - nothing to set up on the common single-disk case. Your six existing folders (Documents, Uploads, Pictures, Music, Shared media, Personal vaults) become datasets, each with its own optional quota and a snapshot schedule (off, daily or weekly, with how many to keep). A snapshot is a full timestamped copy; restoring one always takes a safety copy of what was there first, so a restore is itself undoable.
+
+### 6. App Store
+
+Install real, self-hosted apps - Nextcloud, Pi-hole, a Minecraft server, Jellyfin, or any Docker image you point it at - as containers VORLAN manages: install, view logs, stop, start and uninstall. The installer sets Docker up for you automatically if it isn't already there.
+
+### 7. Background service lifecycle
+
+VORLAN installs as a background service (a systemd user service on Linux) that starts the moment install finishes, again at every boot even before anyone signs in, and restarts itself if it ever crashes. **Services** shows its state and uptime, with Restart/Stop controls right there instead of a terminal.
+
+### 8. SMB and NFS sharing
+
+Any of the five shareable datasets (everything except Personal vaults, which stay PIN-locked and private) can be turned into a network share from **Storage Manager**. SMB shares use real per-account Samba logins kept in sync with your VORLAN password, so the same sign-in works from a Windows or Mac file browser. NFS has no sign-in of its own - an NFS share is reachable by any device on the local network, which is stated plainly in the toggle itself.
 
 ---
 
@@ -130,11 +150,12 @@ The *Connect a phone* item in the account menu shows a QR code that opens VORLAN
 |---|---|
 | **Administrator desktop** | Draggable, resizable windows with keyboard control; layouts remembered per user; full-screen windows on phones |
 | **Resource Monitor** | Live and 30-day charts for processor, memory, network and disk; process list; system details |
-| **Storage Manager** | Volumes and per-folder usage, cached for 30 seconds |
+| **Storage Manager** | Volumes and per-folder usage; pools, quotas and scheduled snapshots per dataset; turn a dataset into an SMB (Windows/Mac) or NFS (Linux/NAS-client) network share |
+| **App Store** | Install real self-hosted apps as Docker containers, from a small curated catalog or any image, with logs and stop/start/uninstall |
 | **Control Panel** | Accounts (create, roles, password reset, delete, sign out everywhere) and devices (see and sign out) |
 | **Task Manager** | Running, waiting, finished and failed background tasks |
 | **Log Center** | Searchable, filterable audit log with CSV export |
-| **Services, Network, Support** | Service health and counters, interfaces and addresses, security summary and diagnostics bundle |
+| **Services, Network, Support** | Service health and counters (restart/stop VORLAN itself on an install that runs it as a systemd service), interfaces and addresses, security summary and diagnostics bundle |
 | **Accounts and roles** | Administrator, employee and guest; the first account is the administrator |
 | **AI Assistant** | Offline chat backed by a local Ollama model (`phi3`), with history and streaming responses |
 | **Files** | Documents, Uploads, Pictures and Music with search, recent files, copy, move, rename and upload |
@@ -253,13 +274,13 @@ installer/         The Linux installer
 Modelled on the architecture of TrueNAS.
 
 - [x] SQLite data layer, roles, admin API, audit log, metrics, job queue
+- [x] Storage engine: pools (auto-formed from whatever disk holds the data), quotas and scheduled snapshots per dataset
 - [x] Administrator desktop and the redesigned user interface
+- [x] App Store: install real Docker apps, from a small curated catalog or any image
 - [x] Security hardening: HTTPS, private signing key, revocable sessions, rate limits, authenticated files
-- [ ] Storage engine (pools, datasets, snapshots)
-- [ ] App registry
-- [ ] System service lifecycle (systemd)
-- [ ] SMB and NFS sharing
-- [ ] QR-based device onboarding, including a hotspot that runs alongside your regular Wi-Fi. Design work is in [`docs/superpowers/`](docs/superpowers)
+- [x] System service lifecycle: runs as a systemd user service, starts at boot, restarts on crash, controllable from **Services** or the terminal
+- [x] SMB and NFS sharing: per-dataset toggles in **Storage Manager**, real Samba accounts kept in sync with VORLAN logins
+- [x] QR-based device onboarding, including a hotspot that runs alongside your regular Wi-Fi (the **Connect a phone** menu item, and the installer's own hotspot). Design work is in [`docs/superpowers/`](docs/superpowers)
 
 ## License
 

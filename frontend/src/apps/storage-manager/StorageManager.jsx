@@ -70,6 +70,19 @@ export const StorageManager = () => {
       },
     },
     {
+      key: 'shared', header: 'Shared', sortValue: (l) => (l.smbEnabled ? 1 : 0) + (l.nfsEnabled ? 1 : 0),
+      render: (l) => {
+        if (!l.shareable) return <span className="text-[var(--ink-muted)]">—</span>;
+        if (!l.smbEnabled && !l.nfsEnabled) return <span className="text-[var(--ink-muted)]">No</span>;
+        return (
+          <div className="flex gap-1">
+            {l.smbEnabled && <Badge tone="accent">SMB</Badge>}
+            {l.nfsEnabled && <Badge tone="accent">NFS</Badge>}
+          </div>
+        );
+      },
+    },
+    {
       key: 'actions', header: <span className="sr-only">Actions</span>, align: 'right',
       render: (l) => (l.datasetKey ? (
         <IconButton label={`Quota and snapshots for ${l.label}`} onClick={() => setManaging(l)}><History size={15} aria-hidden="true" /></IconButton>

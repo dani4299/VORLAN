@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { verifyToken, FILE_COOKIE, VAULT_COOKIE } = require('../middleware/auth.middleware');
 const account = require('../services/account.service');
+const sharing = require('../services/sharing.service');
 const auditLog = require('../services/auditLog.service');
 const sessions = require('../services/sessions.service');
 const { loginByAccount, loginByAddress } = require('../services/rateLimiter.service');
@@ -76,6 +77,7 @@ router.post('/signup', async (req, res) => {
         [username, hashedPassword, userRole, email, fullName || null, new Date().toISOString()]
       );
       auditLog.log(username, 'account.created', userRole === 'admin' ? 'first account on this install — granted administrator' : `role: ${userRole}`);
+      sharing.syncSambaUser(username, password).catch(() => {});
       return res.status(201).json({ message: 'Account created.', userId: result.lastID, role: userRole });
     } catch (err) {
       if (err.message.includes('UNIQUE constraint failed: users.username')) return res.status(409).json({ error: 'That username is already taken.' });
@@ -227,6 +229,10 @@ router.patch('/account', verifyToken, async (req, res) => {
       } catch (cascadeErr) {
         console.error('Username rename cascade error:', cascadeErr);
       }
+      // Samba has no rename of its own, and only ever sees a plaintext password at the moment one is
+      // set - which a rename doesn't carry. The old Samba account is removed; SMB access comes back
+      // for the new name the next time this person sets a password (documented in installer/README.md).
+      sharing.removeSambaUser(oldUsername).catch(() => {});
       auditLog.log(newUsername, 'account.renamed', `${oldUsername} -> ${newUsername}`);
     }
 
@@ -262,6 +268,7 @@ router.post('/password', verifyToken, async (req, res) => {
     }
     loginByAccount.succeed(key);
     await execute('UPDATE users SET password = ? WHERE id = ?', [await bcrypt.hash(newPassword, 10), req.user.id]);
+    sharing.syncSambaUser(req.user.username, newPassword).catch(() => {});
     // A new password ends every other sign-in: whoever else was in with the old one is out.
     const ended = await sessions.revokeForUser(req.user.id, { exceptSessionId: req.user.sid, reason: 'password changed' });
     auditLog.log(req.user.username, 'account.password_changed', `${ended} other sign-in${ended === 1 ? '' : 's'} ended`);

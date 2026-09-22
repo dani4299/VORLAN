@@ -1,0 +1,133 @@
+/* Hallmark · route: studied-DNA · genre: modern-minimal
+ * theme: studied-DNA (source: https://styles.refero.design/style/6b667ffc-5158-4000-9252-3a107d5161ee)
+ * paper: #e5e4e0 (Parchment) · ink: #1d1d1d · surface: #ffffff · hairline: #bfbebe · panel: #cdcdc9
+ * display + body: Geist (stand-in for the style's proprietary "Ataero Retina OB"; one family only, as the style requires)
+ * The style's own values are used as given. Every colour, font, space, radius and duration used by style.css is declared here. */
+
+@font-face {
+  font-family: "Geist";
+  src: url("/assets/fonts/geist-latin-var.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+/* Metric-matched fallback (measured in Chrome) so the font swap does not shift layout. */
+@font-face {
+  font-family: "Geist Fallback";
+  src: local("Arial");
+  size-adjust: 102.51%;
+  ascent-override: 98.04%;
+  descent-override: 28.78%;
+  line-gap-override: 0%;
+}
+
+/* Wordmark face: closest free match to the DSRF logo lettering (heavy, wide geometric capitals). Used for the company name only. */
+@font-face {
+  font-family: "Montserrat";
+  src: url("/assets/fonts/montserrat-latin-800-900.woff2") format("woff2");
+  font-weight: 800 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Montserrat Fallback";
+  src: local("Arial Bold"), local("Arial");
+  font-weight: 800 900;
+  size-adjust: 105.96%;
+  ascent-override: 91.36%;
+  descent-override: 23.69%;
+  line-gap-override: 0%;
+}
+
+/* Animatable angles: the hero sphere's shimmer and the Contact button's rotating border ring. */
+@property --glow-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@property --sphere-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 255deg;
+}
+
+:root {
+  /* Colour: the style's monochrome set */
+  --color-parchment: #e5e4e0;
+  --color-ink: #1d1d1d;
+  --color-paper: #ffffff;
+  --color-ash: #bfbebe;
+  --color-stone: #cdcdc9;
+  --color-ink-2: #4a4945;
+  --color-on-ink: #e5e4e0;
+  --color-on-ink-2: #bfbebe;
+  --color-ink-line: #3d3d3b;
+  --color-error: #8c1d1d;
+  --color-success: #1f5a34;
+
+  /* The one chromatic element: the hero sphere */
+  --sphere-yellow: rgb(250 203 14);
+  --sphere-pink: rgb(240 107 168);
+  --sphere-blue: rgb(120 186 230);
+  --sphere-white: rgb(255 255 255);
+  --sphere-gradient: linear-gradient(var(--sphere-angle), var(--sphere-yellow), var(--sphere-pink) 30%, var(--sphere-blue) 65%, var(--sphere-white));
+  --glow-yellow: rgb(250 203 14 / 0.5);
+  --glow-pink: rgb(240 107 168 / 0.45);
+  --glow-blue: rgb(120 186 230 / 0.45);
+
+  /* Type: one family */
+  --font: "Geist", "Geist Fallback", system-ui, sans-serif;
+  --font-brand: "Montserrat", "Montserrat Fallback", "Geist", system-ui, sans-serif;
+  --text-caption: 0.75rem;
+  --text-body-sm: 0.9375rem;
+  --text-body: 1.125rem;
+  --text-subheading: clamp(1.5rem, 1rem + 1.6vw, 2.125rem);
+  --text-heading-sm: clamp(1.75rem, 1.1rem + 2.2vw, 2.875rem);
+  --text-heading: clamp(2.25rem, 1.2rem + 4vw, 4.375rem);
+  --text-display: clamp(2.6rem, 0.5rem + 9vw, 6.4rem);
+  --track-caption: 0.05em;
+  --track-display: 0.013em;
+  --lh-display: 0.9;
+  --lh-heading: 0.95;
+  --lh-tight: 1.05;
+  --lh-body: 1.45;
+
+  /* Space: the style's scale (base 4px) */
+  --sp-4: 0.25rem;
+  --sp-5: 0.3125rem;
+  --sp-6: 0.375rem;
+  --sp-8: 0.5rem;
+  --sp-12: 0.75rem;
+  --sp-15: 0.9375rem;
+  --sp-19: 1.1875rem;
+  --sp-24: 1.5rem;
+  --sp-30: 1.875rem;
+  --sp-32: 2rem;
+  --sp-46: 2.875rem;
+  --sp-76: 4.75rem;
+  --sp-119: 7.4375rem;
+  --section-pad: clamp(3rem, 2rem + 6vw, 7.4375rem);
+
+  /* Shape: cards sharp, interactive 10px, no shadows anywhere */
+  --radius-card: 0;
+  --radius-control: 10px;
+  --rule-w: 1px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 150ms;
+  --dur-short: 300ms;
+  --dur-long: 900ms;
+
+  /* Layout */
+  --page-max: 1400px;
+  --page-gutter: clamp(1rem, 4vw, 1.875rem);
+  --measure: 62ch;
+  --nav-h: 4.25rem;
+
+  --z-base: 1;
+  --z-nav: 200;
+  --z-menu: 300;
+  --z-skip: 400;
+}
