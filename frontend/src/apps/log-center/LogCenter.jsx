@@ -45,6 +45,10 @@ const EVENTS = {
   'admin.session_revoked': { label: 'Sign-in ended by an administrator' },
   'admin.user_signed_out': { label: 'Account signed out everywhere' },
   'admin.diagnostics_downloaded': { label: 'Diagnostics downloaded' },
+  'admin.dataset_settings_changed': { label: 'Dataset settings changed' },
+  'admin.snapshot_taken': { label: 'Snapshot taken' },
+  'admin.snapshot_deleted': { label: 'Snapshot deleted' },
+  'admin.snapshot_restored': { label: 'Snapshot restored' },
   'task.failed': { label: 'Task failed', problem: true },
 };
 

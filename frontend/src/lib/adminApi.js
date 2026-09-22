@@ -29,6 +29,12 @@ export const getSystemInfo = () => get('/admin/system/info');
 export const getProcesses = (limit = 15) => get('/admin/system/processes', { limit });
 
 export const getStorage = () => get('/admin/storage');
+/** `quotaGb` is null to clear the quota, or a number of gigabytes; snapshot fields are optional. */
+export const updateDataset = (key, changes) => api.patch(`/admin/storage/datasets/${key}`, changes, { headers: authHeaders() }).then((r) => r.data.dataset);
+export const listSnapshots = (key) => get(`/admin/storage/datasets/${key}/snapshots`).then((d) => d.snapshots);
+export const takeSnapshot = (key) => api.post(`/admin/storage/datasets/${key}/snapshots`, {}, { headers: authHeaders() }).then((r) => r.data.snapshot);
+export const deleteSnapshot = (id) => api.delete(`/admin/storage/snapshots/${id}`, { headers: authHeaders() });
+export const restoreSnapshot = (id) => api.post(`/admin/storage/snapshots/${id}/restore`, {}, { headers: authHeaders() }).then((r) => r.data);
 export const getServices = () => get('/admin/system/services');
 export const getNetwork = () => get('/admin/system/network');
 export const getSecurity = () => get('/admin/system/security');
