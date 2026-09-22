@@ -6,8 +6,10 @@ const { spawn } = require('child_process');
 
 /** A Docker error: `status` is a best-guess HTTP-style code from the CLI's own wording (Docker's
  * exit codes don't distinguish "not found" from "already exists" from anything else), `message`
- * is its stderr, verbatim. */
-const dockerError = (status, message) => Object.assign(new Error(message || 'The docker command failed.'), { status, docker: true });
+ * is its stderr, verbatim. `reason` is set only for the two states the App Store shows calmly
+ * instead of as an error - "not_installed" and "not_running" - so the frontend can branch on a
+ * stable value instead of pattern-matching Docker's own wording a second time. */
+const dockerError = (status, message, reason) => Object.assign(new Error(message || 'The docker command failed.'), { status, docker: true, reason });
 
 /** Docker's own text is the only signal a CLI call gives back, so a few common phrasings are
  * mapped to a status the rest of the app can branch on; anything else is just shown as-is. */
@@ -17,6 +19,13 @@ const classify = (stderr) => {
   if (/no such (container|image|object|network)/i.test(stderr)
     || /manifest unknown|manifest for .* not found/i.test(stderr)
     || /repository does not exist|pull access denied/i.test(stderr)) return dockerError(404, message);
+  // The CLI is installed and ran fine, but couldn't reach the daemon - Docker Desktop (or the
+  // docker/dockerd service on Linux) isn't running. This is the single most common "App Store
+  // doesn't work yet" state on a machine that genuinely has Docker installed, so it gets its own
+  // calm message instead of surfacing the raw socket/named-pipe error text.
+  if (/cannot connect to the docker daemon|failed to connect to the docker api|daemon is not running|error during connect/i.test(stderr)) {
+    return dockerError(503, "Docker isn't running.", 'not_running');
+  }
   return dockerError(undefined, message);
 };
 
@@ -28,21 +37,22 @@ const run = (args, { input } = {}) => new Promise((resolve, reject) => {
   let stderr = '';
   proc.stdout.on('data', (d) => { stdout += d; });
   proc.stderr.on('data', (d) => { stderr += d; });
-  proc.on('error', (err) => reject(dockerError(0, err.code === 'ENOENT'
-    ? "Docker isn't installed (the `docker` command was not found)." : err.message)));
+  proc.on('error', (err) => reject(err.code === 'ENOENT'
+    ? dockerError(503, "Docker isn't installed.", 'not_installed')
+    : dockerError(0, err.message)));
   proc.on('close', (code) => (code === 0 ? resolve({ stdout, stderr }) : reject(classify(stderr))));
   if (input !== undefined) proc.stdin.end(input);
 });
 
-/** True/false, never throws - used to decide whether to show the App Store as available at all.
- * Distinguishes "docker isn't installed" from "installed but the daemon isn't running/reachable"
- * only by whichever text Docker itself gives; both are reported as unavailable either way. */
+/** Never throws - used to decide whether to show the App Store as available at all, and which of
+ * three calm states to show if not: `reason` is "not_installed", "not_running", or (for anything
+ * else Docker might say) undefined, in which case `message` is Docker's own text, shown as-is. */
 const ping = async () => {
   try {
     await run(['info', '--format', '{{.ServerVersion}}']);
     return { available: true };
   } catch (err) {
-    return { available: false, error: err.message };
+    return { available: false, reason: err.reason, message: err.message };
   }
 };
 

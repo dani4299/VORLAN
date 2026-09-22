@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { ExternalLink, Play, ScrollText, Square, Trash2 } from 'lucide-react';
+import {
+  ExternalLink, Package, PackageX, Play, ScrollText, Square, Trash2,
+} from 'lucide-react';
 import { Section, WindowLayout } from '../../components/layout/WindowLayout';
 import { Badge } from '../../components/ui/Badge';
 import { Button, IconButton } from '../../components/ui/Button';
@@ -29,7 +31,7 @@ const TABS = [
 export const AppStore = () => {
   const showToast = useToast();
   const [tab, setTab] = useState('catalog');
-  const { data: dockerStatus } = usePolling(getAppsStatus, 15000);
+  const { data: dockerStatus, reload: reloadDockerStatus } = usePolling(getAppsStatus, 15000);
   const { data: catalog } = usePolling(listAppCatalog, 60000);
   const { data: installed, error: installedError, reload } = usePolling(listApps, 3000);
 
@@ -102,11 +104,37 @@ export const AppStore = () => {
   ], [working]);
 
   if (dockerStatus && !dockerStatus.available) {
+    // "Not installed" and "not running" are the two ordinary, expected reasons the App Store
+    // isn't usable yet - not errors. Both get a calm EmptyState with the obvious next step,
+    // instead of Docker's own raw connection/socket text in a red error banner. Anything else
+    // Docker says is genuinely unexpected, so that one case still shows as a real error, verbatim.
+    if (dockerStatus.reason === 'not_installed') {
+      return (
+        <WindowLayout>
+          <EmptyState
+            icon={PackageX}
+            title="Install Docker to use the App Store"
+            hint="Apps run as Docker containers. Once Docker is installed, this opens on its own - no need to restart VORLAN."
+            action={<Button variant="secondary" size="sm" onClick={reloadDockerStatus}>Check again</Button>}
+          />
+        </WindowLayout>
+      );
+    }
+    if (dockerStatus.reason === 'not_running') {
+      return (
+        <WindowLayout>
+          <EmptyState
+            icon={Package}
+            title="Docker isn't running"
+            hint="Docker is installed, but its own app (Docker Desktop, or the docker service on Linux) needs to be started first."
+            action={<Button variant="secondary" size="sm" onClick={reloadDockerStatus}>Check again</Button>}
+          />
+        </WindowLayout>
+      );
+    }
     return (
       <WindowLayout>
-        <ErrorState
-          message={`Docker isn't available (${dockerStatus.error || 'not reachable'}). Apps run as Docker containers, so the App Store needs it installed and running. See the installer's README for how Docker gets set up.`}
-        />
+        <ErrorState message={`Couldn't reach Docker: ${dockerStatus.message || 'not reachable'}.`} onRetry={reloadDockerStatus} />
       </WindowLayout>
     );
   }
