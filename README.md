@@ -18,7 +18,7 @@ Administrators get a desktop of windows for running the box (accounts, devices, 
 - [A tour](#a-tour)
 - [Features](#features)
 - [Security](#security)
-- [Install on Linux](#install-on-linux)
+- [Install](#install)
 - [Getting started (development)](#getting-started-development)
 - [Configuration](#configuration)
 - [Tech stack](#tech-stack)
@@ -188,11 +188,13 @@ The *Connect a phone* item in the account menu shows a QR code that opens VORLAN
 
 ---
 
-## Install on Linux
+## Install
 
-A one-click installer is available for Fedora and Debian/Ubuntu. It installs Node.js, Ollama (with the `phi3` model) and [linux-wifi-hotspot](https://github.com/lakinduakash/linux-wifi-hotspot) for phone and tablet access, then adds VORLAN to your application menu.
+One-click installers are available for Linux and Windows. Both check for what each platform needs, install anything missing, fetch and build VORLAN, and add it to your applications - Linux gets a systemd background service and an app menu entry; Windows gets a desktop shortcut and a Start Menu entry.
 
 > This repo is currently private, so there's no public download link yet. For now, if you have access to this repo:
+
+### Linux (Fedora, Debian/Ubuntu)
 
 ```bash
 git clone https://github.com/dani4299/VORLAN.git
@@ -201,6 +203,18 @@ chmod +x VORLAN/installer/install.sh
 ```
 
 See [`installer/README.md`](installer/README.md) for details, supported systems, HTTPS notes and troubleshooting.
+
+### Windows 10/11
+
+```powershell
+git clone https://github.com/dani4299/VORLAN.git
+powershell -ExecutionPolicy Bypass -File VORLAN\installer-windows\install.ps1
+```
+
+Installs to `%LOCALAPPDATA%\VORLAN` and adds a desktop shortcut plus a Start Menu entry. SMB/NFS
+sharing is Linux-only (see [Roadmap](#roadmap)); everything else works the same as on Linux, minus
+the background service - VORLAN runs while its shortcut has started it, the same as most desktop
+apps. See [`installer-windows/README.md`](installer-windows/README.md) for details.
 
 ## Getting started (development)
 
@@ -274,6 +288,7 @@ docs/
   screenshots/     The pictures in this README
   superpowers/     Design specs and implementation plans for in-progress work
 installer/         The Linux installer
+installer-windows/ The Windows installer
 ```
 
 ## Roadmap
