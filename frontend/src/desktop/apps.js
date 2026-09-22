@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Activity, Folder, HardDrive, Image as ImageIcon, LifeBuoy, ListChecks, Lock, MessageSquare, Music, Network,
-  Package, ScrollText, Server, Settings, SlidersHorizontal, StickyNote, Video,
+  ScrollText, Server, Settings, SlidersHorizontal, StickyNote, Video,
 } from 'lucide-react';
 
 // The desktop's app registry: what can be launched, who can launch it, and how big its window
@@ -46,10 +46,6 @@ const APP_DEFINITIONS = [
   define({
     id: 'support', title: 'Support', icon: LifeBuoy, adminOnly: true, size: { w: 760, h: 620 },
     Component: named(() => import('../apps/support/Support'), 'Support'),
-  }),
-  define({
-    id: 'app-store', title: 'App Store', icon: Package, adminOnly: true, size: { w: 980, h: 660 },
-    Component: named(() => import('../apps/app-store/AppStore'), 'AppStore'),
   }),
   define({
     id: 'files', title: 'Files', icon: Folder, size: { w: 980, h: 640 },

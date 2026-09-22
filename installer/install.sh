@@ -47,7 +47,7 @@ fi
 
 ui_detect_backend || fail "Could not find or install a dialog tool (zenity/kdialog/whiptail)."
 
-ui_message "Welcome to VORLAN" "This installs VORLAN and everything it needs: Node.js, Ollama (with the phi3 model), Docker (for the App Store), and linux-wifi-hotspot for phone/tablet access via a WiFi hotspot.
+ui_message "Welcome to VORLAN" "This installs VORLAN and everything it needs: Node.js, Ollama (with the phi3 model), Samba/NFS (for network shares), and linux-wifi-hotspot for phone/tablet access via a WiFi hotspot.
 
 VORLAN itself runs as a background service, started now and again automatically every time this computer starts - no need to keep a terminal or the application menu shortcut open.
 
@@ -61,7 +61,7 @@ if [ -z "$SSID" ]; then SSID="$DEFAULT_SSID"; fi
 PASSWORD="$(ui_password "WiFi Password" "Choose the WiFi password (leave as-is to use the generated one shown):" )"
 if [ -z "$PASSWORD" ]; then PASSWORD="$DEFAULT_PASSWORD"; fi
 
-ui_confirm "Ready to Install" "VORLAN will now install Node.js, Ollama + the phi3 model, Docker, linux-wifi-hotspot, and VORLAN itself.
+ui_confirm "Ready to Install" "VORLAN will now install Node.js, Ollama + the phi3 model, Samba/NFS, linux-wifi-hotspot, and VORLAN itself.
 
 WiFi network name: $SSID
 
@@ -69,7 +69,7 @@ This may take several minutes and will ask for your password once. Continue?" ||
 
 ui_progress_start "Installing VORLAN"
 
-ui_progress_update 10 "Installing system dependencies (Node.js, Ollama, Docker, linux-wifi-hotspot)..."
+ui_progress_update 10 "Installing system dependencies (Node.js, Ollama, Samba/NFS, linux-wifi-hotspot)..."
 PKEXEC_LOG="$INSTALL_DIR/pkexec-system-deps.log"
 if ! pkexec bash "$SCRIPT_DIR/lib/install-system-deps.sh" "$SSID" "$PASSWORD" "$(whoami)" >> "$LOG_FILE" 2>&1; then
   ui_progress_done
@@ -107,8 +107,6 @@ if ui_confirm "VORLAN Installed" "VORLAN is installed and added to your applicat
 WiFi network name: $SSID
 WiFi password: $PASSWORD
 (keep these - you'll need them to connect a phone/tablet)
-
-If this is the first time Docker was set up on this machine, sign out and back in (or restart) before opening VORLAN's App Store - Docker access only applies to new logins.
 
 Open VORLAN now?"; then
   "$INSTALL_DIR/launch.sh" &

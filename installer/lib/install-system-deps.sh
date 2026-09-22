@@ -32,20 +32,6 @@ else
   step_install_ollama || { echo "STEP_FAILED: Ollama install failed" >&2; exit 1; }
 fi
 
-if step_check_docker; then
-  echo "STEP_OK: Docker already installed"
-else
-  echo "STEP_START: Installing Docker"
-  step_install_docker || { echo "STEP_FAILED: Docker install failed" >&2; exit 1; }
-fi
-
-if step_docker_user_in_group "$USERNAME"; then
-  echo "STEP_OK: $USERNAME can already use Docker"
-else
-  echo "STEP_START: Letting $USERNAME use Docker without sudo"
-  step_add_user_to_docker_group "$USERNAME" || { echo "STEP_FAILED: could not add $USERNAME to the docker group" >&2; exit 1; }
-fi
-
 if step_linger_enabled "$USERNAME"; then
   echo "STEP_OK: $USERNAME already starts services at boot without logging in"
 else

@@ -1,10 +1,10 @@
 [Unit]
 Description=VORLAN
 # A user unit, not a system one - it runs as the account that owns its own
-# data (secure_vault, secrets, Docker group membership), the same as running
-# it by hand always has. `loginctl enable-linger` (set up by the installer)
-# is what lets it start at boot without that account ever logging in.
-After=network-online.target docker.service
+# data (secure_vault, secrets), the same as running it by hand always has.
+# `loginctl enable-linger` (set up by the installer) is what lets it start
+# at boot without that account ever logging in.
+After=network-online.target
 Wants=network-online.target
 
 [Service]

@@ -1,9 +1,9 @@
 # VORLAN Windows Installer
 
-A PowerShell installer that installs Node.js, Ollama + the `phi3` model, and Docker Desktop (for
-VORLAN's App Store) via [winget](https://learn.microsoft.com/windows/package-manager/winget/),
-fetches VORLAN itself, builds it, and adds a desktop shortcut and a Start Menu entry. The Windows
-counterpart of [`installer/`](../installer), which does the same job on Linux.
+A PowerShell installer that installs Node.js and Ollama + the `phi3` model via
+[winget](https://learn.microsoft.com/windows/package-manager/winget/), fetches VORLAN itself,
+builds it, and adds a desktop shortcut and a Start Menu entry. The Windows counterpart of
+[`installer/`](../installer), which does the same job on Linux.
 
 ## Running it
 
@@ -32,8 +32,8 @@ powershell -ExecutionPolicy Bypass -File installer-windows\install.ps1 -InstallD
 ## Re-running
 
 The installer is idempotent: re-running it detects anything already installed (Git, Node.js,
-Ollama, the `phi3` model, Docker Desktop) and skips reinstalling it, and updates an existing
-VORLAN checkout in place (`git pull`) rather than re-cloning.
+Ollama, the `phi3` model) and skips reinstalling it, and updates an existing VORLAN checkout in
+place (`git pull`) rather than re-cloning.
 
 ## What gets installed where
 
@@ -55,25 +55,6 @@ answering on `http://localhost:5000`, starts it (hidden, no console window) if i
 it to come up, then opens your browser to it. Closing the browser tab does not stop VORLAN; if you
 want it to actually stop, close the hidden `node.exe` process from Task Manager, or sign out/restart
 your PC.
-
-## App Store (Docker)
-
-Docker Desktop needs WSL2 and virtualization turned on in your PC's firmware to actually start -
-installing the Docker Desktop *application* (what this installer does) is not the same as it
-being ready to use. If **Apps ▸ App Store** reports Docker as unavailable after installing and
-restarting:
-
-1. Confirm virtualization is enabled in your BIOS/UEFI firmware (often called "Intel VT-x",
-   "AMD-V", or "SVM Mode" - the exact name and location vary by motherboard).
-2. Open an elevated PowerShell and run `bcdedit /set hypervisorlaunchtype auto`, then restart.
-   Task Manager showing "Virtualization: Enabled" only reflects the firmware setting above, not
-   whether Windows is actually configured to start the hypervisor - both are genuinely needed,
-   and neither one alone is enough.
-3. Open Docker Desktop once by hand; it will walk you through installing the WSL2 kernel update
-   if that's still missing.
-
-This is the exact sequence that got Docker Desktop working during this project's own development -
-not a generic guess.
 
 ## Ollama and the AI Assistant
 
@@ -97,7 +78,4 @@ compare the fingerprint it shows with the one in **Support ▸ Security** before
   the top-level README's Roadmap) - `Storage Manager`'s sharing toggles report themselves as
   unavailable on any non-Linux install, this one included, rather than pretending to work.
 - No background service / auto-start-at-boot - see "What the shortcut actually does" above.
-- Verified by running each step for real on a real Windows 11 machine during development, except
-  the Docker Desktop install itself - that step is code-reviewed (it calls the same `winget
-  install --id Docker.DockerDesktop` a person would run by hand) but wasn't re-run end-to-end
-  here, since Docker Desktop was already installed on the machine this was built on.
+- Verified by running each step for real on a real Windows 11 machine during development.

@@ -5,8 +5,8 @@ const { spawn } = require('child_process');
 const db = require('../db');
 const storagePools = require('./storagePools.service');
 
-// SMB/NFS sharing (Phase 7). Talks to the real system the same way Phase 4 talks to Docker: by
-// shelling out to the CLI tools that manage Samba/NFS, never a library or a config-management API.
+// SMB/NFS sharing (Phase 7). Talks to the real system by shelling out to the CLI tools that
+// manage Samba/NFS, never a library or a config-management API.
 //
 // "personal" is deliberately never shareable: it's a folder of every VORLAN user's PIN-locked
 // vault, and a file share has no concept of VORLAN's own per-account PIN gate - exporting it would

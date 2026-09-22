@@ -61,40 +61,6 @@ step_pull_model() {
   ollama pull "$model"
 }
 
-# --- Docker (needed for VORLAN's App Store; skipped, never reinstalled, if already present) ---
-
-step_check_docker() {
-  command -v docker >/dev/null 2>&1
-}
-
-step_install_docker() {
-  # The official convenience script picks the right install method for either distro itself (the
-  # same reason it's used for Ollama above), so there's no dnf/apt-specific package name to get
-  # wrong here. It also enables and starts the systemd service on its own.
-  if [ "${VORLAN_DRY_RUN:-}" = "1" ]; then
-    echo "[DRY RUN] curl -fsSL https://get.docker.com | sh"
-    return 0
-  fi
-  curl -fsSL https://get.docker.com | sh
-}
-
-step_docker_user_in_group() {
-  local username="$1"
-  id -nG "$username" 2>/dev/null | tr ' ' '\n' | grep -qx docker
-}
-
-# Lets that account talk to the Docker socket without sudo - VORLAN itself runs as this user, not
-# root. Takes effect on that user's next login (a fresh sign-in, not just closing a terminal), which
-# install.sh's finishing message says.
-step_add_user_to_docker_group() {
-  local username="$1"
-  if [ "${VORLAN_DRY_RUN:-}" = "1" ]; then
-    echo "[DRY RUN] usermod -aG docker $username"
-    return 0
-  fi
-  usermod -aG docker "$username"
-}
-
 # --- Lingering (lets VORLAN's user systemd service start at boot with nobody logged in) ---
 
 step_linger_enabled() {

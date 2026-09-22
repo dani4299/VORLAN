@@ -79,17 +79,6 @@ function Install-Model {
     return $LASTEXITCODE -eq 0
 }
 
-# --- Docker (for the App Store; best-effort - see installer-windows/README.md) ---
-
-function Test-Docker {
-    $null = Get-Command docker -ErrorAction SilentlyContinue
-    return $?
-}
-
-function Install-Docker {
-    return Invoke-Winget -Id "Docker.DockerDesktop"
-}
-
 # --- VORLAN itself ---
 
 function Get-OrUpdate-Vorlan {

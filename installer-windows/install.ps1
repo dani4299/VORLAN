@@ -2,9 +2,9 @@
 <#
 VORLAN Windows installer.
 
-Checks for (and installs anything missing via winget: Node.js, Ollama + the phi3 model, and
-Docker Desktop for the App Store), fetches/updates VORLAN itself, builds it, then adds a desktop
-shortcut and a Start Menu entry - the Windows counterpart of installer/install.sh on Linux.
+Checks for (and installs anything missing via winget: Node.js and Ollama + the phi3 model),
+fetches/updates VORLAN itself, builds it, then adds a desktop shortcut and a Start Menu entry -
+the Windows counterpart of installer/install.sh on Linux.
 Re-running is safe: every step checks first and skips what's already there.
 
 This file is also published as a standalone download (a GitHub Release asset), so it can't assume
@@ -86,19 +86,6 @@ if (Test-Ollama) {
     } else {
         Write-Host "    pulling (this can take a few minutes)..."
         if (Install-Model -Model "phi3") { Write-Ok "pulled" } else { Write-Warn "couldn't pull phi3 - run 'ollama pull phi3' yourself later" }
-    }
-}
-
-Write-Step "Docker Desktop (for the App Store)"
-if (Test-Docker) {
-    Write-Ok "already installed"
-} else {
-    Write-Host "    installing..."
-    if (Install-Docker) {
-        Write-Ok "installed"
-        Write-Warn "Docker Desktop needs WSL2 and virtualization turned on to actually start. If it doesn't come up after a restart, see installer-windows\README.md."
-    } else {
-        Write-Warn "Docker Desktop install failed - the App Store needs it, but the rest of VORLAN works without it. See installer-windows\README.md for manual install steps."
     }
 }
 
