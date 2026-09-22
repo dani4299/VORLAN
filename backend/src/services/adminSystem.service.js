@@ -19,6 +19,14 @@ const metrics = require('./metrics.service');
 const jobQueue = require('./jobQueue.service');
 const requestStats = require('./requestStats.service');
 const auditLog = require('./auditLog.service');
+const storagePools = require('./storagePools.service');
+
+// Maps a scanStorage() location id to the dataset key that manages its quota and snapshots (see
+// storagePools.service.js). A location with no entry here (loose files, the database) isn't a dataset.
+const LOCATION_TO_DATASET = {
+  'files:Documents': 'documents', 'files:Uploads': 'uploads', 'files:Pictures': 'pictures', 'files:Music': 'music',
+  media: 'media', personal: 'personal',
+};
 
 const safe = async (fn) => {
   try { return await fn(); } catch { return null; }
@@ -71,7 +79,10 @@ const hostVolume = (disks) => {
 
 let storageCache = null; // { at, value }
 let storagePending = null;
-const STORAGE_TTL_MS = 30000;
+const STORAGE_TTL_MS = (() => {
+  const value = parseInt(process.env.VORLAN_STORAGE_SCAN_TTL_MS, 10);
+  return Number.isFinite(value) && value > 0 ? value : 30000;
+})();
 
 const scanStorage = async () => {
   const budget = { left: MAX_ENTRIES_SCANNED, truncated: false };
@@ -107,12 +118,34 @@ const scanStorage = async () => {
 
 /** Volumes are live; the folder scan is cached for 30 seconds, and concurrent callers share one scan. */
 const getStorage = async () => {
-  const info = await systemInfo.getInfo();
+  const [info, datasets, pools, availableDisks] = await Promise.all([
+    systemInfo.getInfo(), storagePools.listDatasets(), storagePools.listPools(), storagePools.listAvailableDisks(),
+  ]);
   if (!storageCache || Date.now() - storageCache.at > STORAGE_TTL_MS) {
     storagePending = storagePending || scanStorage().finally(() => { storagePending = null; });
     storageCache = { at: Date.now(), value: await storagePending };
   }
-  return { volumes: info.disks, dataVolume: hostVolume(info.disks), ...storageCache.value };
+
+  const datasetByKey = Object.fromEntries(datasets.map((d) => [d.key, d]));
+  const locations = storageCache.value.locations.map((l) => {
+    const datasetKey = LOCATION_TO_DATASET[l.id];
+    const dataset = datasetKey && datasetByKey[datasetKey];
+    if (!dataset) return l;
+    return {
+      ...l,
+      datasetKey,
+      quotaBytes: dataset.quotaBytes,
+      overQuota: dataset.quotaBytes != null && l.bytes > dataset.quotaBytes,
+      snapshotsEnabled: dataset.snapshotsEnabled,
+      snapshotFrequency: dataset.snapshotFrequency,
+      snapshotRetain: dataset.snapshotRetain,
+    };
+  });
+
+  return {
+    volumes: info.disks, dataVolume: hostVolume(info.disks), pools, availableDisks,
+    ...storageCache.value, locations,
+  };
 };
 
 // ---------------------------------------------------------------- services

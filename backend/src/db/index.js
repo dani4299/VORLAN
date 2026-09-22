@@ -122,6 +122,63 @@ db.serialize(() => {
   `);
   db.run(`CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)`);
 
+  // A pool is a group of disks VORLAN treats as one storage area. On a single-disk machine there is
+  // exactly one, created automatically the first time the server starts (see storagePools.service.js).
+  db.run(`
+    CREATE TABLE IF NOT EXISTS storage_pools (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )
+  `);
+
+  // Which physical disks make up a pool, named by the volume identifier systeminformation reports
+  // (e.g. "C:"). A disk is only ever added here by an explicit admin action.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS storage_pool_members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      pool_id INTEGER NOT NULL,
+      mount TEXT NOT NULL,
+      added_at TEXT NOT NULL,
+      UNIQUE(pool_id, mount)
+    )
+  `);
+
+  // A dataset is one of VORLAN's own top-level folders, given a quota and a snapshot schedule of its
+  // own. The key is fixed (matches DATASET_DEFS in storagePools.service.js) rather than autoincrement,
+  // since datasets aren't created by admins in this phase - they're the folders VORLAN already has.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS datasets (
+      key TEXT PRIMARY KEY,
+      pool_id INTEGER NOT NULL,
+      label TEXT NOT NULL,
+      quota_bytes INTEGER,
+      snapshots_enabled INTEGER NOT NULL DEFAULT 0,
+      snapshot_frequency TEXT NOT NULL DEFAULT 'daily',
+      snapshot_retain INTEGER NOT NULL DEFAULT 7,
+      updated_at TEXT
+    )
+  `);
+
+  // A snapshot is a full timestamped copy of a dataset's folder, kept under .snapshots/<key>/<folder_name>.
+  // "pre-restore" snapshots are taken automatically right before a restore overwrites the live folder,
+  // so a restore is itself always undoable.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS dataset_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dataset_key TEXT NOT NULL,
+      taken_at TEXT NOT NULL,
+      folder_name TEXT NOT NULL,
+      bytes INTEGER,
+      files INTEGER,
+      kind TEXT NOT NULL CHECK(kind IN ('manual', 'scheduled', 'pre-restore')),
+      created_by TEXT,
+      status TEXT NOT NULL CHECK(status IN ('ok', 'failed')),
+      note TEXT
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_dataset_snapshots_key ON dataset_snapshots(dataset_key)`);
+
   // Runs once — each table is only backfilled while it's still empty, so this is a no-op on
   // every boot after the first successful migration. The source JSON files are left in place
   // afterward, untouched, as a rollback safety net.

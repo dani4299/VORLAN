@@ -10,6 +10,10 @@ const PERSONAL_VAULT_DIR = path.join(SECURE_VAULT_DIR, 'personal');
 // extension-bucketed storage the legacy gallery/music/documents views still read) so introducing
 // actual folders here can't put a directory entry where that old flat reader expects only files.
 const EXPLORER_DIR = path.join(SECURE_VAULT_DIR, 'explorer');
+// Where dataset snapshots (timestamped copies) are kept, one subfolder per dataset key. Sits next to,
+// not inside, the folders it copies - so a snapshot of Documents never shows up as a folder inside
+// Documents itself, and the storage scan below can skip it by name instead of by walking into it.
+const SNAPSHOTS_DIR = path.join(SECURE_VAULT_DIR, '.snapshots');
 
 module.exports = {
   ROOT_DIR,
@@ -17,6 +21,7 @@ module.exports = {
   GLOBAL_MEDIA_DIR,
   PERSONAL_VAULT_DIR,
   EXPLORER_DIR,
+  SNAPSHOTS_DIR,
   NOTES_FILE: path.join(SECURE_VAULT_DIR, 'notes_matrix.json'),
   PROFILES_FILE: path.join(ROOT_DIR, 'profiles.json'),
   HISTORY_FILE: path.join(ROOT_DIR, 'ai_history.json'),

@@ -11,6 +11,8 @@ const { getDiskUsage } = require('../services/storage.service');
 const usersService = require('../services/users.service');
 const adminSystem = require('../services/adminSystem.service');
 const sessions = require('../services/sessions.service');
+const storagePools = require('../services/storagePools.service');
+const snapshots = require('../services/snapshots.service');
 
 const router = express.Router();
 
@@ -234,6 +236,66 @@ router.get('/storage', async (req, res) => {
     res.json(await adminSystem.getStorage());
   } catch (err) {
     sendError(res, err, 'Failed to load storage information.');
+  }
+});
+
+// ---- datasets: quota and snapshot schedule
+
+router.patch('/storage/datasets/:key', async (req, res) => {
+  try {
+    const { quotaGb, snapshotsEnabled, snapshotFrequency, snapshotRetain } = req.body || {};
+    const quotaBytes = quotaGb === null || quotaGb === undefined ? quotaGb : Math.round(Number(quotaGb) * 1024 ** 3);
+    const dataset = await storagePools.updateDataset(req.params.key, { quotaBytes, snapshotsEnabled, snapshotFrequency, snapshotRetain });
+    auditLog.log(req.user.username, 'admin.dataset_settings_changed', `${req.params.key}: ${JSON.stringify(req.body)}`);
+    res.json({ message: 'Saved.', dataset });
+  } catch (err) {
+    sendError(res, err, 'Failed to update that dataset.');
+  }
+});
+
+router.get('/storage/datasets/:key/snapshots', async (req, res) => {
+  try {
+    res.json({ snapshots: await snapshots.listSnapshots(req.params.key) });
+  } catch (err) {
+    sendError(res, err, 'Failed to load snapshots.');
+  }
+});
+
+router.post('/storage/datasets/:key/snapshots', async (req, res) => {
+  try {
+    const job = jobQueue.enqueue('storage.snapshot', () => snapshots.takeSnapshot(req.params.key, { kind: 'manual', createdBy: req.user.username }), {
+      label: `Snapshot ${req.params.key}`,
+      startedBy: req.user.username,
+    });
+    const snapshot = await job.done;
+    auditLog.log(req.user.username, 'admin.snapshot_taken', `${req.params.key}: ${snapshot.folderName}`);
+    res.status(201).json({ message: 'Snapshot taken.', snapshot });
+  } catch (err) {
+    sendError(res, err, 'Failed to take a snapshot.');
+  }
+});
+
+router.delete('/storage/snapshots/:id', async (req, res) => {
+  try {
+    const snapshot = await snapshots.deleteSnapshot(req.params.id);
+    auditLog.log(req.user.username, 'admin.snapshot_deleted', `${snapshot.datasetKey}: ${snapshot.folderName}`);
+    res.json({ message: 'Snapshot deleted.' });
+  } catch (err) {
+    sendError(res, err, 'Failed to delete that snapshot.');
+  }
+});
+
+router.post('/storage/snapshots/:id/restore', async (req, res) => {
+  try {
+    const job = jobQueue.enqueue('storage.restore', () => snapshots.restoreSnapshot(req.params.id, { createdBy: req.user.username }), {
+      label: `Restore snapshot #${req.params.id}`,
+      startedBy: req.user.username,
+    });
+    const { restored, safetySnapshot } = await job.done;
+    auditLog.log(req.user.username, 'admin.snapshot_restored', `${restored.datasetKey}: restored ${restored.folderName} (safety copy: ${safetySnapshot.folderName})`);
+    res.json({ message: 'Restored.', restored, safetySnapshot });
+  } catch (err) {
+    sendError(res, err, 'Failed to restore that snapshot.');
   }
 });
 

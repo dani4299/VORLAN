@@ -32,6 +32,8 @@ const listeners = require('./src/listeners');
 const metrics = require('./src/services/metrics.service');
 const sessions = require('./src/services/sessions.service');
 const tls = require('./src/services/tls.service');
+const storagePools = require('./src/services/storagePools.service');
+const snapshots = require('./src/services/snapshots.service');
 
 listeners.register();
 
@@ -95,6 +97,10 @@ const listen = (server, port, label) => new Promise((resolve) => {
 const start = async () => {
   let httpsReady = false;
 
+  // Before anything can be requested: the storage pool and its datasets need to exist so the very
+  // first admin request for them doesn't race their creation.
+  await storagePools.ensureDefaults();
+
   if (TLS_ENABLED) {
     const certificate = await tls.ensureCertificate();
     const httpsServer = https.createServer({ key: certificate.key, cert: certificate.cert, minVersion: 'TLSv1.2' }, app);
@@ -139,6 +145,7 @@ const start = async () => {
   sessions.purge().catch((e) => console.error('Failed to tidy old sign-ins:', e.message));
   setInterval(() => sessions.purge().catch(() => {}), 6 * 60 * 60 * 1000).unref();
   metrics.start().catch((e) => console.error('Metrics collection failed to start:', e.message));
+  snapshots.start();
 };
 
 start().catch((err) => {

@@ -37,6 +37,7 @@ backend/secure_vault/notes_matrix.json
 backend/secure_vault/personal/
 backend/secure_vault/media/
 backend/secure_vault/explorer/
+backend/secure_vault/.snapshots/
 backend/hotspot_config.json
 backend/devices.json
 
