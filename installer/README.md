@@ -1,7 +1,8 @@
 # VORLAN Linux Installer
 
 A single-file installer for Fedora and Debian/Ubuntu that installs
-Node.js/npm, Ollama + the `phi3` model, [linux-wifi-hotspot](https://github.com/lakinduakash/linux-wifi-hotspot),
+Node.js/npm, Ollama + the `phi3` model, Docker (for VORLAN's App Store),
+[linux-wifi-hotspot](https://github.com/lakinduakash/linux-wifi-hotspot),
 and VORLAN itself, then adds VORLAN to your application menu.
 
 ## Running it
@@ -30,9 +31,9 @@ anything.
 ## Re-running
 
 The installer is idempotent: re-running it detects anything already
-installed (Node, Ollama, the `phi3` model, linux-wifi-hotspot) and skips
-reinstalling it, and updates an existing VORLAN checkout in place (`git
-pull`) rather than re-cloning.
+installed (Node, Ollama, the `phi3` model, Docker, linux-wifi-hotspot) and
+skips reinstalling it, and updates an existing VORLAN checkout in place
+(`git pull`) rather than re-cloning.
 
 ## What gets installed where
 
@@ -49,8 +50,20 @@ package-install/build command print what it *would* run instead of running
 it:
 
 ```bash
-VORLAN_DRY_RUN=1 bash lib/install-system-deps.sh "VORLAN-test" "somepassword"
+VORLAN_DRY_RUN=1 bash lib/install-system-deps.sh "VORLAN-test" "somepassword" "$(whoami)"
 ```
+
+## App Store (Docker)
+
+VORLAN's App Store installs other self-hosted apps (Nextcloud, Pi-hole, a
+Minecraft server, or any Docker image you point it at) as containers. This
+installer sets Docker up for you automatically: skipped entirely if it's
+already installed, installed via Docker's own official script otherwise, and
+your account is added to the `docker` group so VORLAN (which runs as you, not
+root) can use it without `sudo`. That group membership only applies from your
+*next* sign-in - if this is the first time Docker was set up on this machine,
+sign out and back in (or restart) before opening the App Store, or it will
+report Docker as unavailable even though it's installed.
 
 ## HTTPS
 
@@ -74,3 +87,7 @@ signs in again).
   in a container - the Debian/Ubuntu package-manager path is verified via
   dry-run + code review against `linux-wifi-hotspot`'s own documented
   dependencies, not a full container run.
+- The Docker setup step is verified the same way (dry-run + code review
+  against Docker's own documented install script and group-membership
+  behavior) - it hasn't been run against a real Fedora or Debian/Ubuntu
+  machine yet.

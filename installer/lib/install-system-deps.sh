@@ -9,8 +9,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/pkg.sh"
 source "$SCRIPT_DIR/steps.sh"
 
-SSID="${1:?Usage: install-system-deps.sh <ssid> <password>}"
-PASSWORD="${2:?Usage: install-system-deps.sh <ssid> <password>}"
+SSID="${1:?Usage: install-system-deps.sh <ssid> <password> <username>}"
+PASSWORD="${2:?Usage: install-system-deps.sh <ssid> <password> <username>}"
+USERNAME="${3:?Usage: install-system-deps.sh <ssid> <password> <username>}"
 
 if ! pkg_detect; then
   echo "STEP_FAILED: unsupported package manager (need dnf or apt)" >&2
@@ -29,6 +30,20 @@ if step_check_ollama; then
 else
   echo "STEP_START: Installing Ollama"
   step_install_ollama || { echo "STEP_FAILED: Ollama install failed" >&2; exit 1; }
+fi
+
+if step_check_docker; then
+  echo "STEP_OK: Docker already installed"
+else
+  echo "STEP_START: Installing Docker"
+  step_install_docker || { echo "STEP_FAILED: Docker install failed" >&2; exit 1; }
+fi
+
+if step_docker_user_in_group "$USERNAME"; then
+  echo "STEP_OK: $USERNAME can already use Docker"
+else
+  echo "STEP_START: Letting $USERNAME use Docker without sudo"
+  step_add_user_to_docker_group "$USERNAME" || { echo "STEP_FAILED: could not add $USERNAME to the docker group" >&2; exit 1; }
 fi
 
 if step_check_hotspot_tool; then
