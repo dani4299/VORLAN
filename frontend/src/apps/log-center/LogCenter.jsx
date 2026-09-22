@@ -49,6 +49,10 @@ const EVENTS = {
   'admin.snapshot_taken': { label: 'Snapshot taken' },
   'admin.snapshot_deleted': { label: 'Snapshot deleted' },
   'admin.snapshot_restored': { label: 'Snapshot restored' },
+  'admin.app_install_started': { label: 'App install started' },
+  'admin.app_started': { label: 'App started' },
+  'admin.app_stopped': { label: 'App stopped' },
+  'admin.app_uninstalled': { label: 'App uninstalled' },
   'task.failed': { label: 'Task failed', problem: true },
 };
 

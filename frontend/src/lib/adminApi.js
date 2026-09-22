@@ -55,5 +55,16 @@ export const downloadDiagnostics = async () => {
   return name;
 };
 
+// ---- App Store ----
+
+export const getAppsStatus = () => get('/admin/apps/status');
+export const listAppCatalog = () => get('/admin/apps/catalog').then((d) => d.catalog);
+export const listApps = () => get('/admin/apps').then((d) => d.apps);
+export const installApp = (body) => api.post('/admin/apps', body, { headers: authHeaders() }).then((r) => r.data.app);
+export const startApp = (id) => api.post(`/admin/apps/${id}/start`, {}, { headers: authHeaders() }).then((r) => r.data.app);
+export const stopApp = (id) => api.post(`/admin/apps/${id}/stop`, {}, { headers: authHeaders() }).then((r) => r.data.app);
+export const uninstallApp = (id, removeData) => api.delete(`/admin/apps/${id}`, { params: { removeData }, headers: authHeaders() });
+export const getAppLogs = (id) => get(`/admin/apps/${id}/logs`).then((d) => d.logs);
+
 /** The message to show for a failed admin request: the server's own words when it sent any. */
 export const errorMessage = (err, fallback) => err?.response?.data?.error || fallback;
