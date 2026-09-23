@@ -38,9 +38,8 @@ VORLAN began as a sidebar with four pages. It has since been rebuilt in a series
 | **3. New design system, admin desktop and new UI** | One flat, accessible design system. A windowed desktop for administrators. Every user page redesigned. |
 | **4. Security hardening** | HTTPS by default, a private per-install signing key, revocable sessions you can end from any device, brute-force limits, and files that finally require a sign-in. |
 | **5. Storage engine** | Pools auto-formed from whatever disk holds your data, quotas and scheduled snapshots per dataset, all managed from **Storage Manager**. |
-| **6. App Store** | Install real self-hosted apps as Docker containers, from a small curated catalog or any image you point it at. |
-| **7. Background service lifecycle** | VORLAN runs as a systemd service that starts at boot and restarts itself if it crashes, controllable from **Services** or the terminal. |
-| **8. SMB and NFS sharing** (latest) | Turn any of the shared datasets into a Windows/Mac (SMB) or Linux/NAS-client (NFS) network share, right from **Storage Manager**. |
+| **6. Background service lifecycle** | VORLAN runs as a systemd service that starts at boot and restarts itself if it crashes, controllable from **Services** or the terminal. |
+| **7. SMB and NFS sharing** (latest) | Turn any of the shared datasets into a Windows/Mac (SMB) or Linux/NAS-client (NFS) network share, right from **Storage Manager**. |
 
 ### 1. Backend foundation
 
@@ -72,15 +71,11 @@ See [Security](#security) for the details. In short: HTTPS by default; a private
 
 A storage pool is formed automatically from whichever disk already holds your data - nothing to set up on the common single-disk case. Your six existing folders (Documents, Uploads, Pictures, Music, Shared media, Personal vaults) become datasets, each with its own optional quota and a snapshot schedule (off, daily or weekly, with how many to keep). A snapshot is a full timestamped copy; restoring one always takes a safety copy of what was there first, so a restore is itself undoable.
 
-### 6. App Store
-
-Install real, self-hosted apps - Nextcloud, Pi-hole, a Minecraft server, Jellyfin, or any Docker image you point it at - as containers VORLAN manages: install, view logs, stop, start and uninstall. The installer sets Docker up for you automatically if it isn't already there.
-
-### 7. Background service lifecycle
+### 6. Background service lifecycle
 
 VORLAN installs as a background service (a systemd user service on Linux) that starts the moment install finishes, again at every boot even before anyone signs in, and restarts itself if it ever crashes. **Services** shows its state and uptime, with Restart/Stop controls right there instead of a terminal.
 
-### 8. SMB and NFS sharing
+### 7. SMB and NFS sharing
 
 Any of the five shareable datasets (everything except Personal vaults, which stay PIN-locked and private) can be turned into a network share from **Storage Manager**. SMB shares use real per-account Samba logins kept in sync with your VORLAN password, so the same sign-in works from a Windows or Mac file browser. NFS has no sign-in of its own - an NFS share is reachable by any device on the local network, which is stated plainly in the toggle itself.
 
@@ -103,17 +98,18 @@ Administrators land on a desktop. Every tool is a window: open several, arrange 
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/storage-sharing.png" alt="A dataset's Network sharing panel with SMB and NFS toggles on and the exact connection address shown"><br><b>Turn on a network share.</b> One switch per protocol, right in the dataset's own settings - the exact <code>\\host\share</code> or <code>mount host:/path</code> to use appears the moment it's on.</td>
-    <td width="50%"><img src="docs/screenshots/app-store.png" alt="App Store catalog with Nextcloud, Pi-hole, Minecraft server and Jellyfin, each with an Install button"><br><b>App Store.</b> Install real self-hosted apps as Docker containers - a small curated catalog, or any image you point it at.</td>
-  </tr>
-  <tr>
     <td width="50%"><img src="docs/screenshots/control-panel.png" alt="Control Panel accounts list"><br><b>Control Panel: accounts.</b> Create accounts, change roles, reset passwords, sign an account out everywhere, or delete it with a typed confirmation.</td>
-    <td width="50%"><img src="docs/screenshots/control-panel-devices.png" alt="Control Panel devices list with sign-in state"><br><b>Control Panel: devices.</b> Every browser and phone that has signed in, whether it still is, and a one-click <i>sign out</i> for any of them.</td>
   </tr>
   <tr>
+    <td width="50%"><img src="docs/screenshots/control-panel-devices.png" alt="Control Panel devices list with sign-in state"><br><b>Control Panel: devices.</b> Every browser and phone that has signed in, whether it still is, and a one-click <i>sign out</i> for any of them.</td>
     <td width="50%"><img src="docs/screenshots/log-center.png" alt="Log Center showing sign-ins, failed vault PINs and administrator actions"><br><b>Log Center.</b> The audit log with search, categories and CSV export. Failed sign-ins, blocked attempts and sign-outs stand out.</td>
-    <td width="50%"><img src="docs/screenshots/support.png" alt="Support window with the Security section showing the certificate fingerprint"><br><b>Support.</b> What this install is and where it keeps things, the <b>Security</b> section (certificate fingerprint and expiry, where the signing key lives) and a diagnostics download to send when something needs help.</td>
   </tr>
 </table>
+
+<p align="center">
+  <img src="docs/screenshots/support.png" alt="Support window with the Security section showing the certificate fingerprint" width="720">
+  <br><b>Support.</b> What this install is and where it keeps things, the <b>Security</b> section (certificate fingerprint and expiry, where the signing key lives) and a diagnostics download to send when something needs help.
+</p>
 
 The desktop also has **Task Manager** (running and finished tasks such as file copies) and **Network** (interfaces, live traffic and the addresses other devices should use). **Services** shows every core service's health, including VORLAN's own - restartable or stoppable right there on an install that runs it as a background service.
 
@@ -162,7 +158,6 @@ The *Connect a phone* item in the account menu shows a QR code that opens VORLAN
 | **Administrator desktop** | Draggable, resizable windows with keyboard control; layouts remembered per user; full-screen windows on phones |
 | **Resource Monitor** | Live and 30-day charts for processor, memory, network and disk; process list; system details |
 | **Storage Manager** | Volumes and per-folder usage; pools, quotas and scheduled snapshots per dataset; turn a dataset into an SMB (Windows/Mac) or NFS (Linux/NAS-client) network share |
-| **App Store** | Install real self-hosted apps as Docker containers, from a small curated catalog or any image, with logs and stop/start/uninstall |
 | **Control Panel** | Accounts (create, roles, password reset, delete, sign out everywhere) and devices (see and sign out) |
 | **Task Manager** | Running, waiting, finished and failed background tasks |
 | **Log Center** | Searchable, filterable audit log with CSV export |
@@ -302,7 +297,6 @@ Modelled on the architecture of TrueNAS.
 - [x] SQLite data layer, roles, admin API, audit log, metrics, job queue
 - [x] Storage engine: pools (auto-formed from whatever disk holds the data), quotas and scheduled snapshots per dataset
 - [x] Administrator desktop and the redesigned user interface
-- [x] App Store: install real Docker apps, from a small curated catalog or any image
 - [x] Security hardening: HTTPS, private signing key, revocable sessions, rate limits, authenticated files
 - [x] System service lifecycle: runs as a systemd user service, starts at boot, restarts on crash, controllable from **Services** or the terminal
 - [x] SMB and NFS sharing: per-dataset toggles in **Storage Manager**, real Samba accounts kept in sync with VORLAN logins
